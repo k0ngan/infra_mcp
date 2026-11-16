@@ -115,7 +115,10 @@ function revisar(datos, ruta) {
 
     // Dos usuarios apuntando al mismo vault significa que uno lee las notas del
     // otro. Es un error de configuracion, no una preferencia.
-    const vault = path.resolve(String(bruto.vault).trim());
+    // Contra RAIZ, igual que en todas partes: si aqui se resolviera contra el
+    // directorio de trabajo, "vaults/pepe" y la ruta absoluta del mismo vault
+    // parecerian dos carpetas distintas y el choque pasaria sin verse.
+    const vault = path.resolve(RAIZ, String(bruto.vault).trim());
     const duenoPrevio = vaultsVistos.get(vault.toLowerCase());
     if (duenoPrevio) throw new Error(`Los usuarios "${duenoPrevio}" y "${id}" comparten el vault ${vault}.`);
     vaultsVistos.set(vault.toLowerCase(), id);
@@ -165,8 +168,16 @@ function derivarId(correo, usuariosExistentes = {}) {
  */
 export function rutaDeCookie(id, usuario) {
   if (usuario.cookie && String(usuario.cookie).trim()) {
-    return path.resolve(String(usuario.cookie).trim());
+    return path.resolve(RAIZ, String(usuario.cookie).trim());
   }
+
+  // En contenedor no hay %LOCALAPPDATA%, y una cookie escrita adentro se pierde
+  // al bajar el contenedor: habria que volver a pegarla en cada `up`. Con
+  // PLATAFORMA_COOKIES apuntando a un volumen, sobrevive.
+  if (process.env.PLATAFORMA_COOKIES) {
+    return path.resolve(RAIZ, process.env.PLATAFORMA_COOKIES, id, "canvas_session");
+  }
+
   const localAppData =
     process.env.LOCALAPPDATA ||
     path.join(process.env.USERPROFILE || process.env.HOME || process.cwd(), "AppData", "Local");
@@ -180,7 +191,10 @@ export function rutaDeCookie(id, usuario) {
 function entornoDe(baseUrl, id, usuario) {
   return {
     CANVAS_BASE_URL: baseUrl,
-    CANVAS_VAULT_DIR: path.resolve(usuario.vault),
+    // Contra RAIZ y no contra el directorio de trabajo: asi "vaults/pepe" en
+    // usuarios.json significa lo mismo en Windows y dentro del contenedor, y no
+    // cambia de sitio segun desde donde se haya lanzado el proceso.
+    CANVAS_VAULT_DIR: path.resolve(RAIZ, usuario.vault),
     CANVAS_SUBDIR: usuario.subdir || "Canvas",
     CANVAS_COOKIE_FILE: rutaDeCookie(id, usuario),
     // CANVAS_UPLOAD_DIR no se declara nunca. Ver el comentario de arriba.
@@ -327,8 +341,11 @@ export async function crearUsuario({ id, nombre, correo, contrasena, rol, vault,
     .find(([, otro]) => String(otro.correo || "").toLowerCase() === correoNormalizado);
   if (duenoDelCorreo) throw fallo("Ya hay una cuenta con ese correo.", 409);
 
+  // Una ruta relativa se entiende desde la raiz del proyecto, no desde donde se
+  // lanzo el proceso: es lo que deja que la misma configuracion sirva en
+  // Windows y dentro del contenedor.
   const carpeta = vault && String(vault).trim()
-    ? path.resolve(String(vault).trim())
+    ? path.resolve(RAIZ, String(vault).trim())
     : path.join(RAIZ, "vaults", identificador);
 
   datos.usuarios[identificador] = {

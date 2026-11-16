@@ -8,7 +8,11 @@
   "scripts": {
     "start": "node web/src/servidor.mjs",
     "check": "node --check web/src/servidor.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "preparar": "node scripts/preparar.mjs",
+    "up": "npm run preparar && docker compose up -d --build",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f"
   },
   "engines": {
     "node": ">=18"

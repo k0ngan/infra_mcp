@@ -1,28 +1,45 @@
-# docker compose up --build
+# La plataforma, entera, para levantar y bajar de aqui.
 #
-# Un solo servicio. El modelo corre en el anfitrion y el contenedor le habla por
-# host.docker.internal: asi Ollama conserva la GPU y la imagen no carga 4,9 GB de
-# pesos que ya estan en el disco.
+#   docker compose up -d --build     levantar  -> http://127.0.0.1:8080
+#   docker compose logs -f           ver que hace
+#   docker compose down              bajar
+#
+# `down` no borra nada tuyo: los vaults, el archivo de usuarios y las cookies de
+# Canvas viven en el disco del anfitrion, montados aca abajo. Lo unico que se va
+# es el contenedor.
+#
+# El modelo se queda afuera, en el Ollama del anfitrion, y el contenedor le habla
+# por host.docker.internal: meterlo adentro serian 4,9 GB de pesos que ya estan
+# en el disco y, de paso, le quitaria la GPU.
 services:
   web:
     build: .
+    container_name: plataforma-estudio
     ports:
-      # Solo a 127.0.0.1: la plataforma guarda sesiones de Canvas de personas
-      # reales y no se publica a la red por accidente, tampoco en contenedor.
+      # Solo a 127.0.0.1: esto guarda sesiones de Canvas de personas reales y no
+      # se publica a la red por accidente, tampoco en contenedor.
       - "127.0.0.1:8080:8080"
     environment:
       PLATAFORMA_PUERTO: "8080"
       PLATAFORMA_HOST: "0.0.0.0"
+      PLATAFORMA_COOKIES: "/app/secretos"
+      # Las sesiones abiertas tambien al volumen: si no, bajar y levantar echa a
+      # todo el mundo de la plataforma.
+      PLATAFORMA_SESIONES: "/app/secretos/sesiones.json"
       OLLAMA_URL: "http://host.docker.internal:11434"
       PLATAFORMA_MODELO: "${PLATAFORMA_MODELO:-llama3.1:latest}"
-      # La pimienta del hash. En una entrega de verdad va en un .env, no aca.
+      # La pimienta del hash. Si la declaras, declarala siempre: cambiarla
+      # invalida las contraseñas que ya existen.
       PLATAFORMA_SECRETO: "${PLATAFORMA_SECRETO:-}"
       PLATAFORMA_REGISTRO: "${PLATAFORMA_REGISTRO:-abierto}"
     volumes:
-      # Lo unico que persiste: los vaults y el archivo de usuarios. El codigo va
-      # horneado en la imagen, no montado, para que lo que se prueba sea lo que
-      # se construyo.
+      # El material sincronizado y las guias que arma la plataforma.
       - ./vaults:/app/vaults
+      # Las cookies de Canvas, una por usuario. Fuera del repositorio.
+      - ./secretos:/app/secretos
+      # Los usuarios y los hashes de sus contraseñas. Tiene que existir antes de
+      # levantar: si no, Docker crea una CARPETA con ese nombre y el servidor no
+      # arranca. `npm run preparar` lo deja listo.
       - ./usuarios.json:/app/usuarios.json
     extra_hosts:
       # En Linux no viene de fabrica; en Docker Desktop sobra pero no estorba.

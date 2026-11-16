@@ -25,8 +25,25 @@ se toma en Canvas, a mano.
 ## Cómo se levanta
 
 ```bash
+npm run up       # levantar -> http://127.0.0.1:8080
+npm run logs     # ver que hace
+npm run down     # bajar
+```
+
+Eso es todo: `up` prepara las carpetas, construye la imagen si hace falta y deja el contenedor
+corriendo. **`down` no borra nada tuyo** — el material, las guías, los usuarios y las cookies de
+Canvas viven en el disco del anfitrión, montados como volúmenes; lo único que se va es el
+contenedor.
+
+Hace falta Docker. Y **Ollama corriendo en el anfitrión**, no dentro de la imagen: meter
+`llama3.1` adentro serían 4,9 GB de pesos que ya están en el disco y, de paso, le quitaría la
+GPU. El contenedor le habla por `host.docker.internal`.
+
+### Sin Docker
+
+```bash
 npm ci
-node web/src/servidor.mjs        # http://127.0.0.1:8080
+npm start                        # http://127.0.0.1:8080
 ```
 
 Node 18 o superior. **Una sola dependencia**: el MCP de Canvas, fijado por commit en
@@ -38,9 +55,21 @@ disco (`../utem/Pruebas/mcp/mcp_canvas`), que existe en una sola máquina: clona
 correrlo no funcionaba, por más que el proyecto presumiera de «ambiente reproducible». Si esa
 carpeta está, se sigue usando para desarrollar; si no, se usa el paquete instalado.
 
-Para compilar las guías a PDF hace falta además **LaTeX** (MiKTeX o TeX Live) con `pdflatex` en
-el PATH. Si no está, la plataforma no se cae: la guía queda en Markdown y en `.tex`, y la
+Aquí sí hace falta tener **LaTeX** instalado (MiKTeX o TeX Live) con `pdflatex` en el PATH; en la
+imagen ya viene. Si no está, la plataforma no se cae: la guía queda en Markdown y en `.tex`, y la
 pantalla dice por qué no hay PDF.
+
+### Lo que comparten las dos formas
+
+`usuarios.json` y `vaults/`, que son los mismos archivos del disco. Lo que no comparten por
+defecto son las cookies de Canvas: el contenedor las guarda en `secretos/` y Windows en
+`%LOCALAPPDATA%`. Si quieres que sean las mismas, declara `PLATAFORMA_COOKIES=secretos` también
+fuera de Docker.
+
+**Las rutas de `usuarios.json` se entienden desde la raíz del proyecto.** Por eso `"vault":
+"vaults/franpintoabraham"` significa lo mismo en Windows y dentro del contenedor, y da igual
+desde qué carpeta se lance el proceso. Una ruta absoluta sigue funcionando, pero amarra la
+configuración a una máquina.
 
 La primera vez no hace falta configurar nada: la pantalla de acceso detecta que no hay usuarios y
 pide crear el administrador. Ahí mismo se puede apuntar a un vault de Obsidian que ya exista; si
@@ -52,18 +81,27 @@ obligatoria.
 El servidor escucha solo en `127.0.0.1` salvo que se declare `PLATAFORMA_HOST` a propósito: la
 plataforma guarda sesiones de Canvas de personas reales y no se expone a la red por accidente.
 
-### En contenedor
+### Qué hay dentro de la imagen
 
-```bash
-docker compose up --build        # http://127.0.0.1:8080
-```
+Node fijado y la instalación mínima de LaTeX que compila las guías (`texlive-latex-base`,
+`-recommended`, `-lang-spanish`, `-fonts-recommended` y `lmodern`: 816 MB). `texlive-latex-extra`
+se deja fuera a propósito, son cientos de megas más, y por eso el documento no usa `enumitem` ni
+`booktabs`. El MCP entra por `npm ci`.
 
-La imagen trae Node fijado y la instalación mínima de LaTeX que compila las guías; el MCP entra
-por `npm ci`. **Ollama se queda fuera, en el anfitrión**, y el contenedor le habla por
-`host.docker.internal`: meter el modelo adentro significaría cargar 4,9 GB de pesos que ya están
-en el disco y, de paso, quitarle la GPU. Lo único que persiste son `vaults/` y `usuarios.json`,
-montados como volúmenes; el código va horneado en la imagen para que lo que se prueba sea lo que
-se construyó.
+El código va **horneado en la imagen**, no montado, para que lo que se prueba sea lo que se
+construyó. Después de tocar código hay que reconstruir, que es lo que hace `npm run up`.
+
+Lo que sí se monta, porque es tuyo y tiene que sobrevivir a `down`:
+
+| En el disco | En el contenedor | Qué guarda |
+|---|---|---|
+| `vaults/` | `/app/vaults` | el material sincronizado y las guías |
+| `secretos/` | `/app/secretos` | las cookies de Canvas y las sesiones abiertas |
+| `usuarios.json` | `/app/usuarios.json` | los usuarios y los hashes de sus contraseñas |
+
+`usuarios.json` tiene que existir **antes** de levantar: un bind mount cuyo origen no existe
+Docker lo crea como carpeta, y entonces el servidor muere con un error que no explica nada. De
+eso se encarga `npm run preparar`, que `npm run up` ya llama.
 
 ## Usuarios
 
