@@ -284,9 +284,15 @@ export function cuerpoALatex(texto) {
     if (!vinetas) return;
     // Las dos longitudes hacen lo que hacia `\setlist{nosep}` de enumitem, sin
     // el paquete: una lista apretada en vez de una con aire de tesis.
+    //
+    // El `{}` delante del texto no es decorativo. `\item` busca un `[` para
+    // leerlo como etiqueta opcional, y el material trae enlaces de Obsidian
+    // (`- [[Canvas/...]]`). Sin el grupo, LaTeX se come el enlace como etiqueta,
+    // y si el texto venia recortado con "…" la etiqueta nunca cierra: la
+    // compilacion muere con "Paragraph ended before \@item was complete".
     partes.push(
       "\\begin{itemize}\n  \\setlength{\\itemsep}{1pt}\\setlength{\\parskip}{0pt}\n" +
-      `${vinetas.map(v => `  \\item ${v}`).join("\n")}\n\\end{itemize}`,
+      `${vinetas.map(v => `  \\item ${v.startsWith("[") ? "{}" : ""}${v}`).join("\n")}\n\\end{itemize}`,
     );
     vinetas = null;
   };

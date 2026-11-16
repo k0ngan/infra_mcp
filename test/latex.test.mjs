@@ -108,6 +108,18 @@ test("el cuerpo tambien se escapa", () => {
   assert.match(cuerpoALatex("el 50% de los casos"), /50\\%/);
 });
 
+test("una vineta que empieza con corchete no se come el texto como etiqueta", () => {
+  // El caso real: un extracto literal con enlaces de Obsidian. Sin el grupo,
+  // \item lee "[[Canvas/...]" como etiqueta opcional y, si el texto venia
+  // recortado con "…", la compilacion muere con un runaway argument.
+  const salida = cuerpoALatex("- [[Canvas/Segundo semestre 2026/Modulo 2…");
+  assert.match(salida, /\\item \{\}\[\[Canvas/);
+});
+
+test("una vineta normal no lleva el grupo de mas", () => {
+  assert.match(cuerpoALatex("- repasar la unidad 2"), /\\item repasar/);
+});
+
 /* ───────── fechaEnPalabras ───────── */
 
 test("escribe la fecha en palabras sin correrse de dia", () => {
