@@ -1,0 +1,13 @@
+# Lo que no tiene por que entrar a la imagen.
+node_modules
+vaults
+trabajos
+salida
+usuarios.json
+.env
+.git
+.claude
+test
+*.log
+*.aux
+*.pdf

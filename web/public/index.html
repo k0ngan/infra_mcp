@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plataforma de estudio UTEM</title>
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+  <!-- ───────── Portada ───────── -->
+  <div id="acceso" class="acceso" hidden>
+
+    <section class="acceso-presentacion">
+      <p class="sello">Universidad Tecnologica Metropolitana</p>
+      <h1>Tu material de Canvas, convertido en guias de estudio</h1>
+      <p class="lema">
+        Sincroniza tus ramos, ordenalos en un vault de Obsidian propio y arma
+        guias en PDF con lo que de verdad paso tu profesor.
+      </p>
+
+      <ul class="ventajas">
+        <li>
+          <span class="marca" aria-hidden="true">&check;</span>
+          <span><strong>Todo tu semestre en un solo lugar</strong>
+          Apuntes, PDF, tareas y anuncios de cada ramo, ordenados y etiquetados solos.</span>
+        </li>
+        <li>
+          <span class="marca" aria-hidden="true">&check;</span>
+          <span><strong>Guias que citan tu material, no internet</strong>
+          Cada seccion se verifica contra la fuente: lo que no esta en tus apuntes, no entra.</span>
+        </li>
+        <li>
+          <span class="marca" aria-hidden="true">&check;</span>
+          <span><strong>Tu cuenta es tuya</strong>
+          Tu material no se mezcla con el de nadie, y la plataforma nunca entrega tareas por ti.</span>
+        </li>
+      </ul>
+
+      <p class="acceso-pie">
+        Plataforma de estudio &middot; INFB6074 Infraestructura para Ciencia de Datos
+      </p>
+    </section>
+
+    <section class="acceso-panel">
+    <div class="acceso-card">
+      <h2 id="titulo-acceso">Iniciar sesion</h2>
+      <p id="ayuda-acceso" class="ayuda"></p>
+
+      <div class="cambio-modo" id="modos">
+        <button class="activa" data-modo="entrar" type="button">Iniciar sesion</button>
+        <button data-modo="registro" type="button">Crear cuenta</button>
+      </div>
+
+      <form id="form-acceso" autocomplete="on">
+        <div class="campo campo-registro" hidden>
+          <label for="acceso-nombre">Nombre</label>
+          <input id="acceso-nombre" type="text" placeholder="Javiera Rojas" autocomplete="name">
+        </div>
+        <div class="campo campo-registro" hidden>
+          <label for="acceso-vault">Vault de Obsidian (opcional)</label>
+          <input id="acceso-vault" type="text" autocomplete="off" placeholder="si ya tienes uno, pega su ruta">
+        </div>
+        <div class="campo">
+          <label for="acceso-correo">Correo</label>
+          <input id="acceso-correo" type="email" required autocomplete="email" placeholder="nombre@utem.cl">
+        </div>
+        <div class="campo">
+          <label for="acceso-clave">Contrasena</label>
+          <input id="acceso-clave" type="password" required autocomplete="current-password" placeholder="al menos 8 caracteres">
+        </div>
+        <button id="enviar-acceso" class="boton" type="submit">Iniciar sesion</button>
+      </form>
+
+      <div id="aviso-acceso" class="nota" style="margin-top:16px" hidden></div>
+    </div>
+    </section>
+  </div>
+
+  <!-- ───────── Aplicacion ───────── -->
+  <div id="app" class="app" hidden>
+    <aside class="lateral">
+      <div class="lateral-cabecera">
+        <h1>Plataforma de estudio</h1>
+        <p>UTEM &middot; INFB6074</p>
+        <div class="lateral-regla"></div>
+        <p class="lateral-nota">Canvas en Obsidian, guias en LaTeX</p>
+      </div>
+
+      <nav class="lateral-nav">
+        <div class="nav-seccion">
+          <p class="nav-titulo">Estudio</p>
+          <div class="nav-items">
+            <button class="nav-item activa" data-panel="material"><span class="punto"></span>Material</button>
+            <button class="nav-item" data-panel="archivos"><span class="punto"></span>Archivos</button>
+            <button class="nav-item" data-panel="grafo"><span class="punto"></span>Grafo</button>
+            <button class="nav-item" data-panel="guias"><span class="punto"></span>Guias</button>
+            <button class="nav-item" data-panel="chat"><span class="punto"></span>Chat</button>
+          </div>
+        </div>
+        <div class="nav-seccion">
+          <p class="nav-titulo">Mi cuenta</p>
+          <div class="nav-items">
+            <button class="nav-item" data-panel="cuenta"><span class="punto"></span>Cookie de Canvas</button>
+            <button class="nav-item" data-panel="usuarios" id="nav-usuarios" hidden><span class="punto"></span>Usuarios</button>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <div>
+      <header class="superior">
+        <div class="izquierda">
+          <div class="usuario-actual">
+            <span class="nombre" id="yo-nombre"></span>
+            <span class="rol" id="yo-correo"></span>
+          </div>
+          <span id="yo-rol" class="etiqueta-rol"></span>
+          <span id="estado-sesion" class="insignia muerta">sin sesion de Canvas</span>
+        </div>
+        <div class="derecha">
+          <button id="tema" class="boton suave" type="button">Modo oscuro</button>
+          <button id="salir" class="boton suave" type="button">Salir</button>
+        </div>
+      </header>
+
+      <main class="contenido">
+
+        <!-- Material -->
+        <section id="panel-material" class="panel">
+          <h2 class="titulo-panel">Material</h2>
+          <p class="bajada">
+            Lo que esta sincronizado en tu vault. Se lee del disco, asi que sigue
+            aca aunque la sesion de Canvas haya vencido.
+          </p>
+
+          <div id="aviso-material" class="nota" hidden></div>
+
+          <div class="card">
+            <h3>Traer mis ramos de Canvas</h3>
+            <p class="ayuda">
+              Guardar la cookie conecta la sesion, pero no mueve nada todavia.
+              Esto baja tus cursos, tareas, paginas y anuncios al vault y los deja
+              etiquetados. La primera vez demora un poco.
+            </p>
+            <div class="fila">
+              <button id="sincronizar" class="boton" type="button">Sincronizar ahora</button>
+              <label class="campo-inline" style="gap:6px">
+                <input id="descargar-archivos" type="checkbox">
+                <span>descargar tambien los adjuntos (PDF, PPTX): mucho mas lento</span>
+              </label>
+            </div>
+            <div id="aviso-sync" class="nota" style="margin-top:14px" hidden></div>
+          </div>
+
+          <div class="card">
+            <h3>Vault</h3>
+            <p id="ruta-vault" class="mono"></p>
+          </div>
+
+          <div class="card">
+            <div class="fila" style="justify-content: space-between">
+              <h3 style="margin:0">Cursos sincronizados</h3>
+              <button id="recargar" class="boton suave" type="button">Recargar</button>
+            </div>
+            <div id="cursos" class="rejilla" style="margin-top:14px"></div>
+          </div>
+        </section>
+
+        <!-- Cookie de Canvas -->
+        <section id="panel-cuenta" class="panel" hidden>
+          <h2 class="titulo-panel">Cookie de Canvas</h2>
+          <p class="bajada">
+            Tu sesion de Canvas, separada de tu cuenta aqui. Esta pantalla no pasa
+            por el modelo: guarda el archivo donde el MCP lo busca y prueba si
+            sirve.
+          </p>
+
+          <div class="card">
+            <h3>Agregar cookie</h3>
+            <p class="ayuda">
+              Pega el valor del header <code>Cookie</code> de una sesion abierta de
+              Canvas. Se guarda fuera del repositorio, nunca se muestra de vuelta y
+              la anterior se conserva al lado por si lo pegado no sirve.
+            </p>
+            <textarea id="cookie" spellcheck="false" placeholder="_normandy_session=...; canvas_session=..."></textarea>
+            <div class="fila" style="margin-top:12px">
+              <button id="guardar-cookie" class="boton" type="button">Guardar cookie</button>
+              <button id="probar-cookie" class="boton suave" type="button">Probar sesion</button>
+            </div>
+            <div id="aviso-cookie" class="nota" style="margin-top:14px" hidden></div>
+          </div>
+
+          <div class="card">
+            <h3>Donde queda guardada</h3>
+            <p id="ruta-cookie" class="mono"></p>
+          </div>
+        </section>
+
+        <!-- Usuarios (solo administradores) -->
+        <section id="panel-usuarios" class="panel" hidden>
+          <h2 class="titulo-panel">Usuarios</h2>
+          <p class="bajada">
+            Cada usuario tiene su propio vault y su propia cookie. Nadie pega la
+            credencial de otro: al crear a alguien, esa persona entra y pega la
+            suya.
+          </p>
+
+          <div class="card">
+            <h3>Crear usuario</h3>
+            <div class="fila">
+              <div class="campo">
+                <label for="nuevo-nombre">Nombre</label>
+                <input id="nuevo-nombre" type="text" placeholder="Javiera" autocomplete="off">
+              </div>
+              <div class="campo">
+                <label for="nuevo-correo">Correo</label>
+                <input id="nuevo-correo" type="email" placeholder="javiera@utem.cl" autocomplete="off">
+              </div>
+              <div class="campo">
+                <label for="nueva-clave">Contrasena</label>
+                <input id="nueva-clave" type="password" placeholder="al menos 8" autocomplete="new-password">
+              </div>
+              <div class="campo">
+                <label for="nuevo-rol">Rol</label>
+                <select id="nuevo-rol">
+                  <option value="estudiante">estudiante</option>
+                  <option value="admin">admin</option>
+                </select>
+              </div>
+              <button id="crear-usuario" class="boton" type="button">Crear</button>
+            </div>
+            <div id="aviso-usuario" class="nota" style="margin-top:14px" hidden></div>
+          </div>
+
+          <div class="card">
+            <h3>Registrados</h3>
+            <table class="tabla">
+              <thead>
+                <tr><th>Usuario</th><th>Rol</th><th>Vault</th><th>Cookie</th><th></th></tr>
+              </thead>
+              <tbody id="tabla-usuarios"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Archivos -->
+        <section id="panel-archivos" class="panel" hidden>
+          <h2 class="titulo-panel">Archivos del ramo</h2>
+          <p class="bajada">
+            Todo lo que tienes guardado de ese ramo en el vault, por tipo. Los
+            adjuntos marcados en ambar existen pero el ayudante no puede leerlos:
+            les falta extraer el texto.
+          </p>
+
+          <div class="card">
+            <div class="fila">
+              <div class="campo" style="flex:1; min-width:280px">
+                <label for="archivos-ramo">Ramo</label>
+                <select id="archivos-ramo"></select>
+              </div>
+              <button id="ver-archivos" class="boton" type="button">Ver</button>
+            </div>
+            <div id="resumen-ramo" class="fila" style="margin-top:14px; gap:8px"></div>
+          </div>
+
+          <div id="listado-ramo"></div>
+          <div id="aviso-archivos" class="nota" hidden></div>
+        </section>
+
+        <!-- Grafo -->
+        <section id="panel-grafo" class="panel" hidden>
+          <h2 class="titulo-panel">Grafo del vault</h2>
+          <p class="bajada">
+            Todo tu vault de una vez, como el grafo global de Obsidian. Cada
+            ramo sale como una isla, porque los enlaces solo existen dentro de
+            un mismo ramo: los crean los modulos al apuntar a sus paginas,
+            tareas y archivos.
+          </p>
+
+          <div class="card">
+            <div class="fila">
+              <button id="ver-grafo" class="boton" type="button">Dibujar todo</button>
+              <button id="reencuadrar" class="boton suave" type="button">Encuadrar</button>
+              <button id="soltar-fijados" class="boton suave" type="button" hidden>Soltar fijados</button>
+              <span class="campo-inline" id="resumen-grafo"></span>
+            </div>
+          </div>
+
+          <div class="card" style="padding:0; overflow:hidden">
+            <canvas id="lienzo-grafo" class="lienzo-grafo" width="1400" height="900"
+                    role="img" aria-label="Grafo de notas del vault"></canvas>
+            <div id="globo" class="globo" hidden></div>
+          </div>
+          <div id="leyenda-grafo" class="leyenda"></div>
+          <p class="ayuda" style="margin-top:10px">
+            <strong>Rueda</strong> para acercar y alejar &middot;
+            <strong>arrastra el fondo</strong> para moverte &middot;
+            <strong>arrastra un punto</strong> y queda fijado donde lo sueltes &middot;
+            <strong>pulsa</strong> un punto para leer la nota, o uno ya fijado para soltarlo.
+          </p>
+          <div id="aviso-grafo" class="nota" hidden></div>
+
+          <aside id="cajon" class="cajon" hidden>
+            <div class="cajon-cabecera">
+              <div>
+                <h3 id="cajon-titulo"></h3>
+                <span id="cajon-tipo" class="etiqueta-rol"></span>
+              </div>
+              <div class="fila" style="gap:8px">
+                <a id="cajon-abrir" class="boton" target="_blank" rel="noopener" hidden>Abrir archivo</a>
+                <button id="cajon-cerrar" class="boton suave" type="button">Cerrar</button>
+              </div>
+            </div>
+            <pre id="cajon-cuerpo" class="cajon-cuerpo"></pre>
+          </aside>
+        </section>
+
+        <!-- Guias -->
+        <section id="panel-guias" class="panel" hidden>
+          <div class="fila" style="justify-content:space-between; align-items:flex-start">
+            <div>
+              <h2 class="titulo-panel">Guias de estudio</h2>
+              <p class="bajada" style="margin-bottom:12px">
+                La guia se arma solo con pasajes de tu propio material, se valida
+                cita por cita y recien ahi se compila a PDF. Las secciones y las
+                citas las decide la plataforma; el modelo solo redacta.
+              </p>
+            </div>
+            <span id="estado-modelo-guias" class="insignia muerta">modelo sin comprobar</span>
+          </div>
+
+          <div class="card">
+            <h3>Armar una guia</h3>
+            <div class="fila">
+              <div class="campo" style="flex:1; min-width:260px">
+                <label for="guia-ramo">Ramo</label>
+                <select id="guia-ramo"></select>
+              </div>
+              <div class="campo" style="flex:1; min-width:260px">
+                <label for="guia-tema">Tema</label>
+                <input id="guia-tema" type="text" placeholder="automatas finitos, o: que entra en la prueba 2">
+              </div>
+            </div>
+
+            <div class="fila" style="margin-top:10px">
+              <div class="campo" style="flex:2; min-width:260px">
+                <label for="guia-titulo">Titulo <span class="campo-inline">(opcional)</span></label>
+                <input id="guia-titulo" type="text" placeholder="se arma solo con el tema y la fecha">
+              </div>
+              <div class="campo" style="flex:1; min-width:150px">
+                <label for="guia-fecha">Fecha de la prueba</label>
+                <input id="guia-fecha" type="date">
+              </div>
+              <div class="campo" style="flex:1; min-width:110px">
+                <label for="guia-hora">Hora</label>
+                <input id="guia-hora" type="text" placeholder="18:00">
+              </div>
+              <div class="campo" style="flex:1; min-width:140px">
+                <label for="guia-sala">Sala</label>
+                <input id="guia-sala" type="text" placeholder="M1-307">
+              </div>
+            </div>
+
+            <div class="fila" style="margin-top:12px">
+              <button id="armar-guia" class="boton" type="button">Armar la guia</button>
+              <label class="campo-inline" style="gap:6px">
+                <input id="guia-sin-modelo" type="checkbox">
+                <span>solo extractos literales de mi material, sin redactar</span>
+              </label>
+            </div>
+            <p id="aviso-modelo-guias" class="ayuda" style="margin-top:8px"></p>
+
+            <div id="aviso-guia" class="nota" style="margin-top:14px" hidden></div>
+            <div id="excluidas-guia" class="citas" style="margin-top:12px" hidden></div>
+          </div>
+
+          <div class="card">
+            <div class="fila" style="justify-content: space-between">
+              <h3 style="margin:0">Guias ya armadas</h3>
+              <button id="recargar-guias" class="boton suave" type="button">Recargar</button>
+            </div>
+            <div id="listado-guias" class="lista-notas"></div>
+          </div>
+        </section>
+
+        <!-- Chat -->
+        <section id="panel-chat" class="panel" hidden>
+          <div class="fila" style="justify-content:space-between; align-items:flex-start">
+            <div>
+              <h2 class="titulo-panel">Preguntale a tus ramos</h2>
+              <p class="bajada" style="margin-bottom:12px">
+                Busca en el material que tienes sincronizado y responde con eso.
+                Si algo no esta en tus apuntes, te lo dice en vez de inventarlo.
+              </p>
+            </div>
+            <span id="estado-modelo" class="insignia muerta">modelo sin comprobar</span>
+          </div>
+
+          <div class="card">
+            <div class="fila">
+              <div class="campo" style="flex:1; min-width:260px">
+                <label for="chat-ramo">Ramo</label>
+                <select id="chat-ramo"></select>
+              </div>
+              <button id="limpiar-chat" class="boton suave" type="button">Empezar de nuevo</button>
+            </div>
+          </div>
+
+          <div id="conversacion" class="conversacion"></div>
+
+          <div class="card">
+            <div class="campo">
+              <label for="chat-pregunta">Tu pregunta</label>
+              <textarea id="chat-pregunta" rows="3" placeholder="Por ejemplo: que entra en la prueba 2?"></textarea>
+            </div>
+            <div class="fila" style="margin-top:10px">
+              <button id="preguntar" class="boton" type="button">Preguntar</button>
+              <span class="campo-inline" id="nombre-modelo"></span>
+            </div>
+            <div id="aviso-chat" class="nota" style="margin-top:14px" hidden></div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

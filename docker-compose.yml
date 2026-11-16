@@ -1,0 +1,30 @@
+# docker compose up --build
+#
+# Un solo servicio. El modelo corre en el anfitrion y el contenedor le habla por
+# host.docker.internal: asi Ollama conserva la GPU y la imagen no carga 4,9 GB de
+# pesos que ya estan en el disco.
+services:
+  web:
+    build: .
+    ports:
+      # Solo a 127.0.0.1: la plataforma guarda sesiones de Canvas de personas
+      # reales y no se publica a la red por accidente, tampoco en contenedor.
+      - "127.0.0.1:8080:8080"
+    environment:
+      PLATAFORMA_PUERTO: "8080"
+      PLATAFORMA_HOST: "0.0.0.0"
+      OLLAMA_URL: "http://host.docker.internal:11434"
+      PLATAFORMA_MODELO: "${PLATAFORMA_MODELO:-llama3.1:latest}"
+      # La pimienta del hash. En una entrega de verdad va en un .env, no aca.
+      PLATAFORMA_SECRETO: "${PLATAFORMA_SECRETO:-}"
+      PLATAFORMA_REGISTRO: "${PLATAFORMA_REGISTRO:-abierto}"
+    volumes:
+      # Lo unico que persiste: los vaults y el archivo de usuarios. El codigo va
+      # horneado en la imagen, no montado, para que lo que se prueba sea lo que
+      # se construyo.
+      - ./vaults:/app/vaults
+      - ./usuarios.json:/app/usuarios.json
+    extra_hosts:
+      # En Linux no viene de fabrica; en Docker Desktop sobra pero no estorba.
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

@@ -1,0 +1,29 @@
+{
+  "_nota": "Normalmente NO hace falta tocar este archivo: la plataforma lo escribe sola cuando creas el administrador en la pantalla de acceso. Esto es solo la referencia del formato. usuarios.json no se versiona porque guarda los hashes de las contrasenas.",
+
+  "canvas_base_url": "https://utem.instructure.com",
+  "mcp_canvas": "../utem/Pruebas/mcp/mcp_canvas",
+
+  "usuarios": {
+    "francisco": {
+      "nombre": "Francisco",
+      "correo": "francisco@utem.cl",
+      "rol": "admin",
+      "contrasena": "scrypt$16384$8$1$<sal en hex>$<clave en hex>",
+      "vault": "C:\\Users\\francisco\\Desktop\\UTEM\\RAMOS\\utem",
+      "subdir": "Canvas",
+
+      "_cookie": "Opcional. Si no se declara, la cookie de Canvas de este usuario vive en %LOCALAPPDATA%\\plataforma-estudio\\francisco\\canvas_session. Aqui solo se dice DONDE esta el archivo; su contenido nunca entra al repositorio.",
+      "cookie": "C:\\Users\\francisco\\AppData\\Local\\canvas-utem-mcp\\canvas_session"
+    },
+
+    "javiera": {
+      "nombre": "Javiera Rojas",
+      "correo": "javiera@utem.cl",
+      "rol": "estudiante",
+      "contrasena": "scrypt$16384$8$1$<sal en hex>$<clave en hex>",
+      "vault": "C:\\Users\\francisco\\Desktop\\UTEM\\RAMOS\\proyecto-semestral\\vaults\\javiera",
+      "subdir": "Canvas"
+    }
+  }
+}

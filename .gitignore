@@ -1,0 +1,30 @@
+# La configuracion real de usuarios apunta a vaults y archivos de cookie de
+# personas concretas. Solo se versiona el ejemplo.
+usuarios.json
+
+# Secretos. Nunca entran al repositorio: ni cookies, ni claves de sesion, ni
+# tokens. Viven fuera del proyecto, uno por usuario.
+secretos/
+*.cookie
+canvas_session
+
+# Variables de entorno de esta maquina. El ejemplo si se versiona.
+.env
+
+# Los vaults son material de clase de personas concretas: notas de Canvas,
+# adjuntos de profesores y nombres de companeros. No se versionan. La
+# plataforma crea el vault de cada usuario en el primer arranque.
+vaults/*
+!vaults/.gitkeep
+
+# Trabajo intermedio
+node_modules/
+trabajos/
+salida/
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+sesiones.json

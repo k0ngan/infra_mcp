@@ -1,0 +1,20 @@
+{
+  "name": "plataforma-estudio-canvas",
+  "version": "0.1.0",
+  "description": "Plataforma de estudio sobre el MCP de Canvas: ordena el material en un vault de Obsidian por usuario y arma guias en LaTeX compiladas a PDF. Solo lectura de Canvas.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "node web/src/servidor.mjs",
+    "check": "node --check web/src/servidor.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "_dependencias": "Una sola, fijada por commit, y esa tampoco tiene dependencias propias. Es lo que hace que clonar el repositorio y correrlo sea verdad: antes el MCP se buscaba en una carpeta hermana que solo existia en una maquina.",
+  "dependencies": {
+    "mcp-canvas": "github:k0ngan/mcp_canvas#85c16d147a87cdc48fae20b26df80f0cc740fdda"
+  }
+}
