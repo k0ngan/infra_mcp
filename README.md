@@ -98,6 +98,7 @@ Lo que sí se monta, porque es tuyo y tiene que sobrevivir a `down`:
 | `vaults/` | `/app/vaults` | el material sincronizado y las guías |
 | `secretos/` | `/app/secretos` | las cookies de Canvas y las sesiones abiertas |
 | `usuarios.json` | `/app/usuarios.json` | los usuarios y los hashes de sus contraseñas |
+| `metricas/` | `/app/metricas` | el registro de uso y las respuestas de la encuesta |
 
 `usuarios.json` tiene que existir **antes** de levantar: un bind mount cuyo origen no existe
 Docker lo crea como carpeta, y entonces el servidor muere con un error que no explica nada. De
@@ -193,6 +194,7 @@ Lo que no se puede hacer, se dice:
 | Chat sobre tu propio material | listo |
 | Guías en LaTeX → PDF | listo |
 | Ambiente en contenedor | listo |
+| Encuesta y cuadro de adopción | listo |
 | Indexación distribuida, Parquet, registro verificable | fase 3 |
 
 La pantalla de material se lee del disco, así que **sigue sirviendo aunque la sesión de Canvas
@@ -210,17 +212,65 @@ grande que tiene ahora mismo.
 Por eso la extracción de texto es la primera pieza de la fase 3, y no un ítem del temario: es la
 que convierte cientos de archivos descargados en material citable.
 
+## Adopción
+
+Una plataforma que nadie usa no se distingue de una que funciona, si lo único que se mira es que
+las pruebas pasen. Las cuatro preguntas que hay que poder contestar son concretas, y el panel
+**Adopción** las contesta con datos:
+
+| | Cómo se mide |
+|---|---|
+| **¿La terminó?** | Hizo los tres pasos del recorrido: pegar la cookie, sincronizar un ramo y generar una guía. El cuadro muestra los tres por separado, así que de quien no llegó se sabe dónde se quedó. |
+| **¿Cuánto la usa?** | Guías generadas, sincronizaciones y mensajes de chat. |
+| **¿Sigue entrando?** | Días distintos con actividad, cuándo fue la última vez y si estuvo activo en los últimos siete días. «Vuelve» exige **dos días distintos**: entrar diez veces en una tarde y no aparecer nunca más no es retención, es una prueba. |
+| **¿Respondió la encuesta?** | Cinco preguntas, una sola obligatoria. Se puede responder de nuevo; se guarda la última y se conserva la fecha de la primera. |
+
+Dos decisiones que vale declarar:
+
+**La guía se cuenta cuando existe, no cuando se pide.** `POST /api/guia` solo encola un trabajo en
+segundo plano. Si el evento se registrara ahí, el informe contaría intentos y «terminó» se pondría
+en verdadero para alguien que lanzó una guía que falló. El registro va dentro del trabajo y después
+del `await`.
+
+**Medir no puede romper la plataforma.** `registrar()` nunca lanza: si el disco está lleno se
+pierde el evento y la petición sigue su curso. Es preferible un hueco en la medición a una guía que
+no se generó por culpa de una estadística.
+
+### Lo que no se guarda
+
+Esto son datos personales de compañeros de curso: quién entró, cuándo y cuántas veces. Por eso:
+
+- La carpeta `metricas/` está en `.gitignore` y se monta como volumen, igual que `secretos/` y
+  `vaults/`. No se versiona y no sale de esta máquina.
+- **No se registra contenido.** Ni el tema de una guía, ni lo que se pregunta en el chat, ni qué
+  ramo se sincronizó. Solo que la acción ocurrió.
+- Los intentos de acceso fallidos no se registran: convertiría el archivo en un rastro de quién se
+  equivoca de contraseña.
+- El cuadro es **solo para administradores** (`GET /api/metricas` responde 403 a un estudiante).
+  Cada quien ve su propia encuesta en `GET /api/encuesta` y nada más.
+- El resumen arma cada fila nombrando los campos uno por uno, así que el hash de la contraseña no
+  puede colarse. Hay una prueba que lo verifica.
+
+El registro es `metricas/eventos.jsonl`, una línea por evento, que se agrega y no se reescribe: si
+el proceso muere a mitad de una escritura se pierde a lo sumo la última línea y las anteriores
+siguen siendo legibles.
+
 ## Pruebas
 
 ```bash
 npm test
 ```
 
-53 pruebas con el runner de Node, sin red, sin Ollama y sin tocar el vault. Lo que cubren es lo
+70 pruebas con el runner de Node, sin red, sin Ollama y sin tocar el vault. Lo que cubren es lo
 que rompe un PDF en silencio: el escapado de LaTeX (una sola pasada, y ningún codepoint raro
 sobrevive), que toda sección salga con al menos una cita y que todas vengan del material, que una
 cita inventada se descarte, y que `canvas_submit_assignment` siga prohibida. La única que necesita
 LaTeX instalado se salta sola si no está.
+
+Las quince de adopción cubren lo que haría quedar mal al informe: que medir tumbe una
+petición, que quien se registró y nunca volvió desaparezca del cuadro —justo el que hay que
+mirar—, que «terminó» se ponga en verdadero sin haber generado una guía, y que el resumen
+arrastre el hash de una contraseña.
 
 ## Diseño visual
 
@@ -252,6 +302,7 @@ web/src/vault.mjs           leer el vault: contenido del ramo, notas y grafo
 web/src/agente.mjs          el modelo local; el codigo busca, el modelo redacta
 web/src/guias.mjs           el pipeline de la guia: fuentes, secciones, citas
 web/src/latex.mjs           escapado, plantilla y compilacion a PDF
+web/src/metricas.mjs        adopcion: quien termino, cuanto usa, si vuelve, si respondio
 web/public/                 la pagina: HTML, CSS y JS a mano
 test/                       node --test, sin red y sin vault
 Dockerfile                  Node fijado + la instalacion minima de LaTeX

@@ -26,6 +26,7 @@ services:
       # Las sesiones abiertas tambien al volumen: si no, bajar y levantar echa a
       # todo el mundo de la plataforma.
       PLATAFORMA_SESIONES: "/app/secretos/sesiones.json"
+      PLATAFORMA_METRICAS: "/app/metricas"
       OLLAMA_URL: "http://host.docker.internal:11434"
       PLATAFORMA_MODELO: "${PLATAFORMA_MODELO:-llama3.1:latest}"
       # La pimienta del hash. Si la declaras, declarala siempre: cambiarla
@@ -37,6 +38,9 @@ services:
       - ./vaults:/app/vaults
       # Las cookies de Canvas, una por usuario. Fuera del repositorio.
       - ./secretos:/app/secretos
+      # La medicion de adopcion y las respuestas de la encuesta. Tambien fuera
+      # del repositorio: son datos personales, y sobreviven a `down`.
+      - ./metricas:/app/metricas
       # Los usuarios y los hashes de sus contraseñas. Tiene que existir antes de
       # levantar: si no, Docker crea una CARPETA con ese nombre y el servidor no
       # arranca. `npm run preparar` lo deja listo.

@@ -102,7 +102,9 @@
           <p class="nav-titulo">Mi cuenta</p>
           <div class="nav-items">
             <button class="nav-item" data-panel="cuenta"><span class="punto"></span>Cookie de Canvas</button>
+            <button class="nav-item" data-panel="encuesta"><span class="punto"></span>Encuesta</button>
             <button class="nav-item" data-panel="usuarios" id="nav-usuarios" hidden><span class="punto"></span>Usuarios</button>
+            <button class="nav-item" data-panel="adopcion" id="nav-adopcion" hidden><span class="punto"></span>Adopcion</button>
           </div>
         </div>
       </nav>
@@ -241,6 +243,61 @@
               </thead>
               <tbody id="tabla-usuarios"></tbody>
             </table>
+          </div>
+        </section>
+
+        <!-- Encuesta -->
+        <section id="panel-encuesta" class="panel" hidden>
+          <h2 class="titulo-panel">Encuesta</h2>
+          <p class="bajada">
+            Cinco preguntas, una sola obligatoria. Sirve para saber si la
+            plataforma te sirvio de verdad o solo funciono. Puedes responderla de
+            nuevo cuando quieras: se guarda la ultima.
+          </p>
+
+          <div class="card">
+            <div id="encuesta-preguntas"></div>
+            <div class="fila" style="margin-top:16px">
+              <button id="enviar-encuesta" class="boton" type="button">Guardar respuestas</button>
+              <span id="encuesta-cuando" class="nota-inline"></span>
+            </div>
+            <div id="aviso-encuesta" class="nota" style="margin-top:14px" hidden></div>
+          </div>
+        </section>
+
+        <!-- Adopcion (solo administradores) -->
+        <section id="panel-adopcion" class="panel" hidden>
+          <h2 class="titulo-panel">Adopcion</h2>
+          <p class="bajada">
+            Quien termino el recorrido, cuanto usa la plataforma, si sigue
+            entrando y si respondio la encuesta. Son datos personales de gente
+            del curso: no salen del disco de esta maquina y solo los ve un
+            administrador.
+          </p>
+
+          <div id="adopcion-totales" class="fila"></div>
+
+          <div class="card">
+            <h3>Persona por persona</h3>
+            <p class="nota" style="margin-bottom:12px">
+              <strong>Termino</strong> significa haber hecho los tres pasos:
+              pegar la cookie, sincronizar un ramo y generar una guia. Quien no,
+              se quedo en alguno, y la columna Pasos dice en cual.
+            </p>
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th>Usuario</th><th>Termino</th><th>Pasos</th><th>Uso</th>
+                  <th>Dias activos</th><th>Ultima vez</th><th>Encuesta</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-adopcion"></tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h3>Respuestas de la encuesta</h3>
+            <div id="adopcion-respuestas"></div>
           </div>
         </section>
 

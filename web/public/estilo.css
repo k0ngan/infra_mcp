@@ -640,3 +640,90 @@ button.curso:hover .ir, button.curso:focus-visible .ir { opacity: 1; }
   font-size: 12.5px;
   line-height: 1.65;
 }
+
+/* ───────── Adopcion y encuesta ───────── */
+
+/* Las cuatro cifras de arriba del panel. Tarjetas iguales que reparten el
+   ancho, para que ninguna parezca mas importante que otra por ser mas grande. */
+.metrica {
+  flex: 1 1 160px;
+  padding: 14px 16px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  background: hsl(var(--card));
+}
+.metrica .cifra {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: hsl(var(--primary));
+}
+.metrica .rotulo {
+  margin-top: 4px;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+.metrica .detalle { font-size: 12px; color: hsl(var(--muted-foreground)); }
+
+/* Si / no de una columna. Verde y rojo, pero con el texto escrito: el color
+   solo no sirve para quien no lo distingue. */
+.pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.pill.si { background: hsl(var(--success) / .14); color: hsl(var(--success)); }
+.pill.no { background: hsl(var(--destructive) / .12); color: hsl(var(--destructive)); }
+.pill.tibio { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+
+/* Los tres pasos del recorrido, en chico, dentro de la celda. */
+.pasos { display: inline-flex; gap: 4px; }
+.pasos span {
+  width: 22px;
+  text-align: center;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 0;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+.pasos span.hecho { background: hsl(var(--success) / .16); color: hsl(var(--success)); }
+
+.nota-inline { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+
+/* Una pregunta de la encuesta. */
+.pregunta { padding: 14px 0; border-bottom: 1px solid hsl(var(--border)); }
+.pregunta:last-child { border-bottom: 0; }
+.pregunta > label, .pregunta .enunciado {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.pregunta .ayuda-p { font-size: 12.5px; color: hsl(var(--muted-foreground)); margin-bottom: 8px; }
+.pregunta textarea {
+  width: 100%;
+  min-height: 70px;
+  resize: vertical;
+  font: inherit;
+  padding: 9px 11px;
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: 9px;
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+}
+.escala { display: flex; gap: 8px; flex-wrap: wrap; }
+.escala label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border: 1px solid hsl(var(--border-strong));
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 13.5px;
+}
+.escala input:checked + span { font-weight: 700; color: hsl(var(--primary)); }

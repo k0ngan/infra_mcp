@@ -1,6 +1,7 @@
 # Lo que no tiene por que entrar a la imagen.
 node_modules
 vaults
+metricas
 trabajos
 salida
 usuarios.json

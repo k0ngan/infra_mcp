@@ -41,6 +41,7 @@ import {
   RAIZ,
 } from "./usuarios.mjs";
 import { ErrorDeCanvas, listarHerramientas, llamar } from "./canvas.mjs";
+import { EVENTOS, PREGUNTAS, encuestaDe, guardarEncuesta, registrar, resumen } from "./metricas.mjs";
 import { estadoDelModelo, responder } from "./agente.mjs";
 import { archivoDeGuia, generarGuia, listarGuias } from "./guias.mjs";
 import { sincronizarCursos } from "./sincronizacion.mjs";
@@ -214,6 +215,9 @@ const PUBLICAS = {
     // Un solo mensaje para correo inexistente y clave equivocada: decir cual de
     // los dos fallo le regala al que prueba la mitad de la respuesta.
     if (!usuario) throw Object.assign(new Error("Correo o contrasena incorrectos."), { estado: 401 });
+    // Solo las que entran: un intento fallido no es uso, y registrarlo
+    // convertiria el archivo en un rastro de quien falla la clave.
+    registrar(usuario.id, EVENTOS.SESION);
     return { usuario: publico(usuario), _token: abrirSesion(usuario.id) };
   },
 
@@ -226,6 +230,7 @@ const PUBLICAS = {
       throw Object.assign(new Error("La plataforma ya tiene usuarios."), { estado: 409 });
     }
     const usuario = await crearUsuario({ ...cuerpo, rol: ROL_ADMIN });
+    registrar(usuario.id, EVENTOS.ALTA, { via: "bootstrap" });
     return { usuario: publico(usuario), _token: abrirSesion(usuario.id) };
   },
 
@@ -245,6 +250,7 @@ const PUBLICAS = {
       });
     }
     const usuario = await crearUsuario({ ...cuerpo, rol: ROL_ESTUDIANTE });
+    registrar(usuario.id, EVENTOS.ALTA, { via: "registro" });
     return { usuario: publico(usuario), _token: abrirSesion(usuario.id) };
   },
 };
@@ -306,9 +312,13 @@ const PRIVADAS = {
     const descargarArchivos = cuerpo.descargar_archivos === true;
     const cursoId = Number.isInteger(cuerpo.course_id) ? cuerpo.course_id : null;
 
-    const trabajo = lanzar(usuario.id, "sincronizacion", reportar =>
-      sincronizarCursos(usuario, { descargarArchivos, cursoId, reportar }),
-    );
+    const trabajo = lanzar(usuario.id, "sincronizacion", async reportar => {
+      const hecho = await sincronizarCursos(usuario, { descargarArchivos, cursoId, reportar });
+      // Dentro del trabajo y despues del await: la ruta solo encola, asi que
+      // registrar aqui afuera contaria intentos en vez de sincronizaciones.
+      registrar(usuario.id, EVENTOS.SINCRONIZACION);
+      return hecho;
+    });
     return { trabajo, ya_estaba: false };
   },
 
@@ -333,7 +343,13 @@ const PRIVADAS = {
     const yaVa = enCurso(usuario.id, "guia");
     if (yaVa) return { trabajo: yaVa, ya_estaba: true };
 
-    const trabajo = lanzar(usuario.id, "guia", reportar => generarGuia(usuario, cuerpo, reportar));
+    const trabajo = lanzar(usuario.id, "guia", async reportar => {
+      const guia = await generarGuia(usuario, cuerpo, reportar);
+      // Si generarGuia lanza, no se registra: "termino el recorrido" tiene que
+      // significar que hubo una guia, no que se intento.
+      registrar(usuario.id, EVENTOS.GUIA);
+      return guia;
+    });
     return { trabajo, ya_estaba: false };
   },
 
@@ -451,19 +467,27 @@ const PRIVADAS = {
    * agente.mjs. Aqui no se decide nada: se pasa la consulta y se devuelve la
    * respuesta con sus citas.
    */
-  "POST /api/chat": async (cuerpo, _url, usuario) =>
-    responder(usuario, {
+  "POST /api/chat": async (cuerpo, _url, usuario) => {
+    registrar(usuario.id, EVENTOS.CHAT);
+    return responder(usuario, {
       course_id: cuerpo.course_id,
       pregunta: cuerpo.pregunta,
       // Un historial que no sea arreglo se ignora: mejor responder sin memoria
       // que reventar dentro del agente por un cuerpo mal armado.
       historial: Array.isArray(cuerpo.historial) ? cuerpo.historial : [],
-    }),
+    });
+  },
 
   // Cada quien maneja su propia cookie. Un administrador tampoco pega la de
   // otro: nadie deberia estar tocando la credencial de una persona ajena.
   "GET /api/cookie": async (_cuerpo, _url, usuario) => estadoDeCookie(usuario),
-  "POST /api/cookie": async (cuerpo, _url, usuario) => guardarCookie(usuario, cuerpo.cookie),
+  "POST /api/cookie": async (cuerpo, _url, usuario) => {
+    const estado = await guardarCookie(usuario, cuerpo.cookie);
+    // Se registra que la pego, no si Canvas la acepto: el paso del recorrido es
+    // haberla pegado, y si esta vencida eso ya se le informa en pantalla.
+    registrar(usuario.id, EVENTOS.COOKIE);
+    return estado;
+  },
 
   "GET /api/usuarios": async (_cuerpo, _url, usuario) => {
     if (usuario.rol !== ROL_ADMIN) return { usuarios: [conEstadoDeCookie(usuario)] };
@@ -473,7 +497,9 @@ const PRIVADAS = {
 
   "POST /api/usuarios": async (cuerpo, _url, usuario) => {
     soloAdmin(usuario);
-    return { creado: publico(await crearUsuario(cuerpo)) };
+    const creado = await crearUsuario(cuerpo);
+    registrar(creado.id, EVENTOS.ALTA, { via: "admin" });
+    return { creado: publico(creado) };
   },
 
   "POST /api/usuarios/eliminar": async (cuerpo, _url, usuario) => {
@@ -482,6 +508,35 @@ const PRIVADAS = {
       throw Object.assign(new Error("No puedes quitarte a ti mismo."), { estado: 409 });
     }
     return eliminarUsuario(cuerpo.usuario);
+  },
+
+  /* ───────── Adopcion: la encuesta y el cuadro ───────── */
+
+  /**
+   * La encuesta que ve cada quien: las preguntas, y lo que ya respondio si ya
+   * la respondio. Se puede volver a responder; se guarda la ultima y se
+   * conserva la fecha de la primera.
+   */
+  "GET /api/encuesta": async (_cuerpo, _url, usuario) => ({
+    preguntas: PREGUNTAS,
+    mia: encuestaDe(usuario.id),
+  }),
+
+  "POST /api/encuesta": async (cuerpo, _url, usuario) => ({
+    guardada: guardarEncuesta(usuario.id, cuerpo.respuestas || {}),
+  }),
+
+  /**
+   * El cuadro de adopcion: quien termino el recorrido, cuanto usa, si vuelve y
+   * si respondio la encuesta.
+   *
+   * **Solo administradores.** Son datos personales de companeros de curso: quien
+   * entro, cuando y cuantas veces. Un estudiante ve su propia encuesta en
+   * GET /api/encuesta y nada mas.
+   */
+  "GET /api/metricas": async (_cuerpo, _url, usuario) => {
+    soloAdmin(usuario);
+    return resumen(await listarUsuarios());
   },
 
   "POST /api/llamar": async (cuerpo, _url, usuario) => {

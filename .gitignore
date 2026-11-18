@@ -17,6 +17,10 @@ canvas_session
 vaults/*
 !vaults/.gitkeep
 
+# Medicion de adopcion. Quien entro, cuando y cuantas veces, mas las respuestas
+# de la encuesta: son datos personales de companeros de curso y no se versionan.
+metricas/
+
 # Trabajo intermedio
 node_modules/
 trabajos/

@@ -1380,6 +1380,257 @@ async function crearUsuario() {
   }
 }
 
+/* ───────── Encuesta ───────── */
+
+/** Dibuja una pregunta segun su tipo, con lo ya respondido si lo hay. */
+function campoDePregunta(pregunta, respuesta) {
+  const caja = document.createElement("div");
+  caja.className = "pregunta";
+
+  const enunciado = document.createElement("span");
+  enunciado.className = "enunciado";
+  enunciado.textContent = pregunta.obligatoria ? `${pregunta.texto} *` : pregunta.texto;
+  caja.append(enunciado);
+
+  if (pregunta.ayuda) {
+    const ayuda = document.createElement("p");
+    ayuda.className = "ayuda-p";
+    ayuda.textContent = pregunta.ayuda;
+    caja.append(ayuda);
+  }
+
+  // Escala y opcion se dibujan igual —una fila de radios—; lo unico que cambia
+  // es de donde salen los valores y que se compara para marcar el elegido.
+  if (pregunta.tipo === "escala" || pregunta.tipo === "opcion") {
+    const valores =
+      pregunta.tipo === "escala"
+        ? Array.from({ length: pregunta.max - pregunta.min + 1 }, (_, i) => String(pregunta.min + i))
+        : pregunta.opciones;
+
+    const escala = document.createElement("div");
+    escala.className = "escala";
+    for (const valor of valores) {
+      const etiqueta = document.createElement("label");
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = `p-${pregunta.id}`;
+      radio.value = valor;
+      radio.checked = respuesta !== undefined && respuesta !== null && String(respuesta) === valor;
+      const texto = document.createElement("span");
+      texto.textContent = valor;
+      etiqueta.append(radio, texto);
+      escala.append(etiqueta);
+    }
+    caja.append(escala);
+    return caja;
+  }
+
+  const area = document.createElement("textarea");
+  area.name = `p-${pregunta.id}`;
+  area.value = respuesta || "";
+  area.maxLength = 2000;
+  caja.append(area);
+  return caja;
+}
+
+async function cargarEncuesta() {
+  const destino = $("#encuesta-preguntas");
+  destino.textContent = "Cargando...";
+  try {
+    const { preguntas, mia } = await pedir("/api/encuesta");
+    estado.encuesta = preguntas;
+    destino.textContent = "";
+    for (const pregunta of preguntas) {
+      destino.append(campoDePregunta(pregunta, mia?.respuestas?.[pregunta.id]));
+    }
+    $("#encuesta-cuando").textContent = mia
+      ? `Respondida el ${new Date(mia.respondida).toLocaleDateString("es-CL")}. Si la vuelves a guardar, se reemplaza.`
+      : "Todavia no la has respondido.";
+  } catch (error) {
+    if (error.manejado) return;
+    destino.textContent = "";
+    avisoDeError($("#aviso-encuesta"), "No se pudo cargar la encuesta", error);
+  }
+}
+
+async function enviarEncuesta() {
+  const boton = $("#enviar-encuesta");
+  boton.disabled = true;
+  try {
+    const respuestas = {};
+    for (const pregunta of estado.encuesta || []) {
+      const campo =
+        document.querySelector(`[name="p-${pregunta.id}"]:checked`) ||
+        document.querySelector(`textarea[name="p-${pregunta.id}"]`);
+      if (campo && campo.value !== "") respuestas[pregunta.id] = campo.value;
+    }
+    await enviar("/api/encuesta", { respuestas });
+    await cargarEncuesta();
+    nota($("#aviso-encuesta"), "Gracias.", " Queda guardada; puedes cambiarla cuando quieras.", "buena");
+  } catch (error) {
+    if (!error.manejado) avisoDeError($("#aviso-encuesta"), "No se pudo guardar", error);
+  } finally {
+    boton.disabled = false;
+  }
+}
+
+/* ───────── Adopcion (administradores) ───────── */
+
+function tarjetaDeMetrica(cifra, rotulo, detalle) {
+  const caja = document.createElement("div");
+  caja.className = "metrica";
+  const n = document.createElement("div");
+  n.className = "cifra";
+  n.textContent = cifra;
+  const r = document.createElement("div");
+  r.className = "rotulo";
+  r.textContent = rotulo;
+  caja.append(n, r);
+  if (detalle) {
+    const d = document.createElement("div");
+    d.className = "detalle";
+    d.textContent = detalle;
+    caja.append(d);
+  }
+  return caja;
+}
+
+/** Si o no, con la palabra escrita: el color solo no sirve para quien no lo ve. */
+function pastilla(bueno) {
+  const span = document.createElement("span");
+  span.className = `pill ${bueno ? "si" : "no"}`;
+  span.textContent = bueno ? "si" : "no";
+  return span;
+}
+
+function filaDeAdopcion(fila) {
+  const tr = document.createElement("tr");
+
+  const quien = document.createElement("td");
+  const nombre = document.createElement("strong");
+  nombre.textContent = fila.nombre;
+  const correo = document.createElement("div");
+  correo.className = "nota-inline";
+  correo.textContent = fila.correo;
+  quien.append(nombre, correo);
+
+  const termino = document.createElement("td");
+  termino.append(pastilla(fila.termino));
+
+  // Los tres pasos, abreviados. El title dice cual es cual sin gastar ancho.
+  const pasos = document.createElement("td");
+  const caja = document.createElement("div");
+  caja.className = "pasos";
+  for (const [clave, letra, largo] of [
+    ["cookie", "C", "Cookie de Canvas pegada"],
+    ["sincronizacion", "S", "Sincronizo un ramo"],
+    ["guia", "G", "Genero una guia"],
+  ]) {
+    const span = document.createElement("span");
+    span.textContent = letra;
+    span.title = `${largo}: ${fila.pasos[clave] ? "si" : "no"}`;
+    if (fila.pasos[clave]) span.classList.add("hecho");
+    caja.append(span);
+  }
+  pasos.append(caja);
+
+  const uso = document.createElement("td");
+  uso.textContent = `${fila.uso.guias} guias · ${fila.uso.sincronizaciones} sinc · ${fila.uso.mensajes_chat} chat`;
+
+  const dias = document.createElement("td");
+  dias.append(document.createTextNode(String(fila.actividad.dias_activos)));
+  if (fila.actividad.vuelve) {
+    const vuelve = document.createElement("span");
+    vuelve.className = "pill si";
+    vuelve.style.marginLeft = "6px";
+    vuelve.textContent = "vuelve";
+    dias.append(vuelve);
+  }
+
+  const ultima = document.createElement("td");
+  if (fila.actividad.ultima === null) {
+    ultima.textContent = "nunca";
+  } else {
+    const d = fila.actividad.dias_desde_ultima;
+    ultima.textContent = d === 0 ? "hoy" : d === 1 ? "ayer" : `hace ${d} dias`;
+    ultima.title = new Date(fila.actividad.ultima).toLocaleString("es-CL");
+  }
+
+  const encuesta = document.createElement("td");
+  encuesta.append(pastilla(fila.encuesta.respondida));
+
+  tr.append(quien, termino, pasos, uso, dias, ultima, encuesta);
+  return tr;
+}
+
+async function cargarAdopcion() {
+  const cuerpo = $("#tabla-adopcion");
+  cuerpo.textContent = "";
+  try {
+    const datos = await pedir("/api/metricas");
+    const t = datos.totales;
+
+    const totales = $("#adopcion-totales");
+    totales.textContent = "";
+    totales.append(
+      tarjetaDeMetrica(`${t.terminaron}/${datos.usuarios}`, "Terminaron el recorrido", `${t.terminaron_pct} %`),
+      tarjetaDeMetrica(`${t.vuelven}/${datos.usuarios}`, "Volvieron otro dia", `${t.vuelven_pct} %`),
+      tarjetaDeMetrica(String(t.activos_ultimos_7_dias), "Activos los ultimos 7 dias", `${t.activos_pct} %`),
+      tarjetaDeMetrica(
+        `${t.respondieron_encuesta}/${datos.usuarios}`,
+        "Respondieron la encuesta",
+        t.promedio_sirvio === null
+          ? `${t.respondieron_pct} %`
+          : `${t.respondieron_pct} % · sirvio ${t.promedio_sirvio}/5`,
+      ),
+    );
+
+    for (const fila of datos.filas) cuerpo.append(filaDeAdopcion(fila));
+
+    // Las respuestas escritas, que es donde esta lo que no cabe en un numero.
+    const respuestas = $("#adopcion-respuestas");
+    respuestas.textContent = "";
+    const conEncuesta = datos.filas.filter(f => f.encuesta.respondida);
+    if (conEncuesta.length === 0) {
+      const vacio = document.createElement("p");
+      vacio.className = "nota-inline";
+      vacio.textContent = "Nadie ha respondido todavia.";
+      respuestas.append(vacio);
+      return;
+    }
+    // Los enunciados salen de /api/encuesta, que puede no haberse pedido nunca:
+    // a este panel se puede entrar directo, sin pasar por la pantalla de la
+    // encuesta. Sin esto, la lista muestra las claves crudas ("guia_fiel").
+    if (!estado.encuesta) {
+      estado.encuesta = (await pedir("/api/encuesta").catch(() => null))?.preguntas || [];
+    }
+    const rotulos = Object.fromEntries(estado.encuesta.map(p => [p.id, p.texto]));
+    for (const fila of conEncuesta) {
+      const bloque = document.createElement("div");
+      bloque.className = "pregunta";
+      const quien = document.createElement("span");
+      quien.className = "enunciado";
+      quien.textContent = fila.nombre;
+      bloque.append(quien);
+      for (const [clave, valor] of Object.entries(fila.encuesta.respuestas)) {
+        const linea = document.createElement("div");
+        linea.className = "nota-inline";
+        linea.textContent = `${rotulos[clave] || clave}: ${valor}`;
+        bloque.append(linea);
+      }
+      respuestas.append(bloque);
+    }
+  } catch (error) {
+    if (error.manejado) return;
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 7;
+    td.textContent = `No se pudo cargar: ${error.message}`;
+    tr.append(td);
+    cuerpo.append(tr);
+  }
+}
+
 /* ───────── Armazon ───────── */
 
 /** Cambia de panel como si se hubiera pulsado su boton en la barra lateral. */
@@ -1396,6 +1647,8 @@ function activarNavegacion() {
       boton.classList.add("activa");
       $(`#panel-${boton.dataset.panel}`).hidden = false;
       if (boton.dataset.panel === "usuarios") cargarUsuarios();
+      if (boton.dataset.panel === "encuesta") cargarEncuesta();
+      if (boton.dataset.panel === "adopcion") cargarAdopcion();
       if (boton.dataset.panel === "chat") comprobarModelo();
       if (boton.dataset.panel === "archivos") verArchivos();
       if (boton.dataset.panel === "guias") { comprobarModelo(); cargarGuias(); }
@@ -1452,6 +1705,7 @@ async function arrancar() {
   $("#yo-correo").textContent = estado.yo.correo;
   $("#yo-rol").textContent = estado.yo.rol;
   $("#nav-usuarios").hidden = estado.yo.rol !== "admin";
+  $("#nav-adopcion").hidden = estado.yo.rol !== "admin";
 
   const yo = await pedir("/api/yo");
   $("#ruta-cookie").textContent = yo.cookie.ruta;
@@ -1500,6 +1754,7 @@ function inicio() {
   $("#guardar-cookie").addEventListener("click", guardarCookie);
   $("#probar-cookie").addEventListener("click", probarCookie);
   $("#crear-usuario").addEventListener("click", crearUsuario);
+  $("#enviar-encuesta").addEventListener("click", enviarEncuesta);
 
   arrancar().catch(error => {
     $("#acceso").hidden = false;

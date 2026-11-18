@@ -39,7 +39,7 @@ COPY usuarios.example.json ./
 
 # Las carpetas que se montan como volumenes. Se crean aca para que existan
 # aunque alguien corra la imagen suelta, sin compose.
-RUN mkdir -p /app/vaults /app/secretos
+RUN mkdir -p /app/vaults /app/secretos /app/metricas
 
 # Dentro del contenedor si se escucha en todas las interfaces: lo que aisla es
 # el contenedor, y el puerto se publica a mano en docker-compose.yml.
@@ -51,6 +51,7 @@ ENV PLATAFORMA_HOST=0.0.0.0 \
     PLATAFORMA_PUERTO=8080 \
     PLATAFORMA_COOKIES=/app/secretos \
     PLATAFORMA_SESIONES=/app/secretos/sesiones.json \
+    PLATAFORMA_METRICAS=/app/metricas \
     OLLAMA_URL=http://host.docker.internal:11434
 
 EXPOSE 8080
