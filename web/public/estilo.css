@@ -370,11 +370,10 @@ button, input, select, textarea { font-family: var(--mono); font-size: var(--t-s
 .nota + .card { margin-top: var(--e-lg); padding-top: var(--e-lg); border-top: 1px solid hsl(var(--border)); }
 .card h3 {
   margin: 0 0 var(--e-xs);
-  font-family: var(--mono);
-  font-size: var(--t-xs);
-  font-weight: 700;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  font-family: var(--serif);
+  font-size: var(--t-lg);
+  font-weight: 400;
+  line-height: 1.25;
 }
 .card .ayuda { margin: 0 0 var(--e-md); max-width: 56ch; font-size: var(--t-sm); line-height: 1.6; color: hsl(var(--muted-foreground)); }
 
@@ -450,6 +449,29 @@ textarea { width: 100%; min-height: 96px; resize: vertical; line-height: 1.6; }
 
 .fila { display: flex; flex-wrap: wrap; gap: var(--e-sm) var(--e-md); align-items: flex-end; }
 .campo { display: flex; flex-direction: column; gap: var(--e-xs); }
+
+/* Las separaciones estaban escritas a mano en el HTML: 38 atributos `style`,
+   y para el MISMO trabajo —despegar un aviso de lo que tiene encima— habia
+   cuatro valores distintos (8, 10, 12, 14 y 16 px). Asi es como una interfaz
+   se desalinea sola: cada instancia se retoca aparte y ninguna coincide. Se
+   dicen una vez, aqui, y el HTML vuelve a ser solo estructura. */
+.card .nota { margin-top: var(--e-md); margin-bottom: var(--e-md); }
+.card > .fila:not(:first-child),
+.card > .rejilla:not(:first-child) { margin-top: var(--e-md); }
+
+/* Fila que reparte: un titulo a la izquierda, un boton a la derecha. */
+.fila.reparte { justify-content: space-between; align-items: baseline; }
+.fila.reparte h3 { margin: 0; }
+
+/* Cabecera de panel: titulo con su bajada a la izquierda, insignia a la derecha. */
+.fila.encabeza { justify-content: space-between; align-items: flex-start; }
+.fila.encabeza .bajada { margin-bottom: var(--e-sm); }
+
+/* Tres anchos de campo con nombre, en vez de cinco numeros puestos a ojo. */
+.campo.ancho { flex: 1 1 260px; }
+.campo.doble { flex: 2 1 260px; }
+.campo.corto { flex: 1 1 140px; }
+.campo.minimo { flex: 1 1 110px; }
 .campo label {
   font-family: var(--mono);
   font-size: var(--t-xs);
@@ -537,6 +559,21 @@ textarea { width: 100%; min-height: 96px; resize: vertical; line-height: 1.6; }
    telefono. Costo encontrarlo. */
 .tabla-ancha { overflow-x: auto; position: relative; }
 .tabla-ancha .tabla { min-width: 520px; }
+
+/* La envoltura se puede enfocar para desplazarla con el teclado, asi que tiene
+   que verse enfocada como cualquier otro control. */
+.tabla-ancha:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+/* Encabezado pegajoso: en la tabla de adopcion, con una fila por persona del
+   curso, al llegar abajo ya no se sabe que columna es cual. Necesita fondo
+   propio, si no el contenido se le transparenta por debajo al desplazar. */
+.tabla-ancha { max-height: min(560px, 75vh); overflow-y: auto; }
+.tabla-ancha .tabla thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: hsl(var(--background));
+}
 
 .vacio { color: hsl(var(--muted-foreground)); font-style: italic; font-size: var(--t-md); }
 .pendiente {
@@ -708,7 +745,7 @@ textarea { width: 100%; min-height: 96px; resize: vertical; line-height: 1.6; }
 
 .grupo-archivos { margin-top: var(--e-lg); }
 .grupo-archivos h3 { display: flex; align-items: baseline; gap: var(--e-sm); }
-.grupo-archivos h3 .cuenta { font-family: var(--mono); font-size: var(--t-xs); font-weight: 400; letter-spacing: 0; text-transform: none; color: hsl(var(--muted-foreground)); }
+.grupo-archivos h3 .cuenta { font-family: var(--mono); font-size: var(--t-xs); font-weight: 400; color: hsl(var(--muted-foreground)); }
 
 .lista-notas { display: flex; flex-direction: column; margin-top: var(--e-sm); }
 .nota-item { display: flex; align-items: baseline; gap: var(--e-md); padding: 7px 0; border-top: 1px solid hsl(var(--border)); font-size: var(--t-sm); }
@@ -798,7 +835,7 @@ button.curso:hover .ir, button.curso:focus-visible .ir { opacity: 1; }
   padding: var(--e-md) var(--e-lg);
   border-bottom: 1px solid hsl(var(--border));
 }
-.cajon-cabecera h3 { margin: 0 0 var(--e-xs); font-family: var(--serif); font-size: var(--t-lg); font-weight: 400; letter-spacing: 0; text-transform: none; }
+.cajon-cabecera h3 { margin: 0 0 var(--e-xs); }
 .cajon-cabecera .boton { padding: 6px 12px; text-decoration: none; }
 .cajon-cuerpo {
   flex: 1;
