@@ -1,100 +1,174 @@
-/* Estructura visual tomada del proyecto ODS (frontend/src/styles/index.css):
-   los mismos tokens HSL, el mismo lienzo gris con cards blancas y bordes
-   marcados, el mismo modo oscuro por [data-theme].
+/* ═══════════════════════════════════════════════════════════════════════════
+   La pantalla se parece a lo que la plataforma fabrica.
 
-   La marca, en cambio, es de la UTEM: azul institucional #004E9A y verde
-   #7AB82F, con #021C36 para los fondos profundos. Son los colores que publica
-   Brandfetch para utem.cl; el manual de identidad visual 2025 no se pudo
-   verificar (el PDF del sitio responde 404). Si el manual dice otra cosa, se
-   cambian los tres valores de --utem-* y lo demas se acomoda solo.
+   Lo que sale de aqui son guias tipografiadas en LaTeX y un vault de Obsidian:
+   documentos. Y la pantalla era un panel de control — lienzo gris, cards
+   blancas con sombra, cabecera en degradado y seis variantes distintas de
+   pildora de 999 px. Es lo primero que sale cuando una aplicacion tiene nueve
+   secciones y tablas, y se notaba que era lo primero que salio.
 
-   La diferencia es que aqui va en CSS plano, sin Tailwind y sin paso de
-   compilacion: el proyecto no tiene dependencias y conviene que siga asi, que
-   es lo que hace que "ambiente reproducible" sea verdad y no una promesa.
+   Esto es lo contrario y es mas fiel: un impreso. Filetes de 1 px en vez de
+   cajas, un indice numerado en vez de una barra de pestanas, serif editorial
+   para la estructura y monoespaciada para el dato. Casi sin esquinas
+   redondeadas, casi sin sombras, y el blanco puesto donde separa.
 
-   IBM Plex se declara primero y cae a system-ui si no esta instalada. No se
-   trae por CDN a proposito: la plataforma tiene que levantar sin red. */
+   La estructura —lateral, barra superior, paneles— se queda como estaba, que es
+   la de cualquier panel administrativo y la que funciona para nueve secciones.
+   Lo que cambia es el tratamiento.
+
+   ───────── La paleta: tres valores y se acabo ─────────
+
+   Papel, tinta y una sola tinta de acento. Ni verde de «bien» ni rojo de «mal»:
+   el estado se dice con la palabra escrita —que ya estaba—, con versalitas y
+   con un punto lleno o hueco. Lo unico que grita es el error, y grita
+   invirtiendose a tinta plena, que destaca mas que cualquier rojo y no gasta un
+   color de la paleta.
+
+   Los dos valores salen de la marca UTEM: #021C36 es la tinta y #004E9A el
+   acento. El verde #7AB82F se queda fuera: con tres valores en total no caben
+   dos acentos. El unico sitio con mas tonos es el grafo, que necesita seis
+   marcas distinguibles para sus seis tipos de nota, y ahi salen todas del mismo
+   eje azul-tinta en vez del arcoiris que habia.
+
+   ───────── Las fuentes: sin CDN, con caracter ─────────
+
+   La plataforma tiene que levantar sin red, asi que traer una fuente por CDN no
+   es una opcion. Lo que si se puede es elegir bien dentro de lo que ya esta
+   instalado:
+
+     Palatino para la estructura. Es una serif de libro de verdad, con caja alta
+     elegante; no la Georgia que sale por descarte. `ui-serif` la resuelve en
+     Apple y «Palatino Linotype» en Windows.
+
+     Cascadia o Consolas para el dato: rotulos, cifras, rutas, identificadores y
+     los propios botones. Monoespaciada donde hay dato —que es donde significa
+     algo— y no como disfraz de «esto es tecnico».
+
+   No hay sans, y es a proposito: serif + monoespaciada es la pareja de un
+   documento tecnico, que es lo que esto produce.
+
+   Los nombres de los tokens se conservan aunque sus valores cambien por
+   completo: el grafo se dibuja en canvas y `app.js` los lee de aqui
+   (`--card`, `--foreground`, `--border-strong`, `--muted-foreground`).
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --background: 220 16% 97%;
-  --foreground: 222 24% 11%;
-  --card: 0 0% 100%;
-  --muted: 216 20% 96%;
-  --muted-foreground: 216 9% 39%;
+  /* ── Papel, tinta, acento ── */
+  --background: 42 30% 96%;          /* papel, apenas calido */
+  --foreground: 211 58% 12%;         /* tinta: el #021C36 de la marca */
+  --card: 42 36% 98.5%;              /* la hoja de encima: campos, globo, lienzo */
+  --muted: 42 16% 92%;
+  --muted-foreground: 211 13% 40%;   /* tinta aguada: rotulos y metadatos */
 
-  --primary: 209 100% 30%;
-  --primary-foreground: 0 0% 100%;
-  --primary-strong: 209 100% 24%;
-  --primary-soft: 209 100% 96%;
+  --primary: 209 100% 30%;           /* el acento, #004E9A */
+  --primary-foreground: 42 36% 98%;
+  --primary-strong: 209 100% 22%;
+  --primary-soft: 209 44% 93%;
 
-  --accent: 86 60% 45%;
-  --accent-soft: 86 55% 95%;
+  /* Sin colores de estado. Apuntan a la tinta o al acento a proposito: lo que
+     distingue un estado de otro es la palabra, la versalita y el punto. */
+  --accent: 209 100% 30%;
+  --accent-soft: 209 44% 93%;
+  --destructive: 211 58% 12%;
+  --success: 209 100% 30%;
+  --warning: 211 58% 12%;
+  --info: 209 100% 30%;
 
-  --destructive: 0 72% 51%;
-  --success: 160 84% 32%;
-  --warning: 38 92% 50%;
-  --info: 213 94% 50%;
-
-  --border: 218 17% 88%;
-  --border-strong: 216 14% 73%;
-  --input: 216 13% 80%;
+  --border: 42 14% 83%;              /* el filete: 1 px y nada mas */
+  --border-strong: 211 16% 56%;
+  --input: 42 14% 76%;
   --ring: 209 100% 30%;
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 10px;
-  --radius-2xl: 12px;
+  /* Las esquinas no son todas iguales. Casi todo a escuadra; 2 px solo donde
+     algo se pulsa, para que el dedo note que es un control. */
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 0px;
 
-  --shadow-color: 220 24% 11%;
-  --sombra-card: 0 1px 3px 0 hsl(var(--shadow-color) / .10), 0 1px 2px -1px hsl(var(--shadow-color) / .08);
-  --sombra-alta: 0 12px 24px -6px hsl(var(--shadow-color) / .14), 0 4px 8px -4px hsl(var(--shadow-color) / .10);
+  /* Una sola sombra, y solo para lo que de verdad flota por encima de la
+     pagina: el cajon y el globo del grafo. Lo demas se separa con un filete. */
+  --sombra-card: none;
+  --shadow-color: 211 58% 12%;
+  --sombra-alta: 0 18px 40px -16px hsl(var(--shadow-color) / .28);
 
-  /* Marca UTEM: azul institucional y verde de apoyo. */
+  /* Los dos de la marca que si se usan. El verde #7AB82F queda fuera: con tres
+     valores en total, el tercero es el acento y no caben dos. */
   --utem-azul: #004E9A;
   --utem-azul-noche: #021C36;
-  --utem-verde: #7AB82F;
-  --utem-gradient: linear-gradient(90deg, #021C36 0%, #004E9A 62%, #1E7FBF 100%);
 
-  --sidebar-bg: #FFFFFF;
-  --sidebar-active-text: #004E9A;
-  --sidebar-active-bg: #E8F1F9;
-  --sidebar-section-label: #5B6670;
+  --sidebar-bg: 211 58% 12%;
+  --sobre-tinta: 42 28% 93%;         /* lo que se lee encima de la tinta */
+  --sobre-tinta-suave: 42 12% 62%;
+  /* El acento tiene dos caras. Sobre papel va el azul oscuro de la marca;
+     sobre la tinta de la lateral y de la portada ese mismo azul desaparece,
+     asi que ahi va su version clara. Mismo valor en los dos temas: esas dos
+     superficies son oscuras tanto de dia como de noche. */
+  --acento-sobre-tinta: 205 88% 68%;
+
+  /* ── Tipografia ── */
+  --serif: ui-serif, "Palatino Linotype", Palatino, "Book Antiqua", "URW Palladio L", Georgia, serif;
+  --mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "DejaVu Sans Mono", monospace;
+
+  /* En rem y fija: esto es una herramienta, no una portada, y el tipo fluido
+     en producto solo hace que nada case.
+     La JERARQUIA —de --t-md para arriba— va a razon 1.25, que es lo que hace
+     que un titulo se lea como titulo. Los tres de abajo estan mas juntos a
+     proposito y no son pasos de jerarquia: son tres papeles distintos que se
+     cruzan con la familia y la caja. 11 px va siempre en versalitas con
+     interletraje, que se ve mas chico de lo que mide; 13 px es monoespaciada,
+     que a igual cuerpo se ve mas grande que la serif; y 15 px es la serif
+     corrida. Opticamente los tres se separan bien aunque el numero diga que
+     estan a 1.15. Subirlos a 1.25 daria prosa de 17 px en una pantalla densa. */
+  --t-xs: .6875rem;   /* 11 */
+  --t-sm: .8125rem;   /* 13 */
+  --t-md: .9375rem;   /* 15 */
+  --t-lg: 1.1875rem;  /* 19 */
+  --t-xl: 1.5rem;     /* 24 */
+  --t-2xl: 1.875rem;  /* 30 */
+
+  /* Escala de 4 pt con nombres de lo que hacen, no de cuanto miden. */
+  --e-xs: 4px;
+  --e-sm: 8px;
+  --e-md: 16px;
+  --e-lg: 28px;
+  --e-xl: 44px;
+  --e-2xl: 72px;
 
   color-scheme: light;
-  font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
 }
 
 [data-theme="dark"] {
-  --background: 220 22% 8%;
-  --foreground: 214 14% 92%;
-  --card: 220 22% 11%;
-  --muted: 220 16% 16%;
-  --muted-foreground: 216 11% 62%;
+  --background: 213 38% 8%;
+  --foreground: 42 22% 90%;          /* papel calido sobre tinta: no blanco puro */
+  --card: 213 30% 11%;
+  --muted: 213 22% 16%;
+  --muted-foreground: 213 12% 62%;
 
-  --primary: 205 85% 65%;
-  --primary-foreground: 213 90% 8%;
-  --primary-strong: 205 88% 74%;
-  --primary-soft: 209 50% 20%;
+  --primary: 205 88% 68%;
+  --primary-foreground: 213 60% 8%;
+  --primary-strong: 205 92% 78%;
+  --primary-soft: 209 40% 17%;
 
-  --accent: 86 55% 55%;
-  --accent-soft: 86 40% 14%;
+  --accent: 205 88% 68%;
+  --accent-soft: 209 40% 17%;
+  --destructive: 42 22% 90%;
+  --success: 205 88% 68%;
+  --warning: 42 22% 90%;
+  --info: 205 88% 68%;
 
-  --destructive: 0 72% 60%;
-  --success: 160 70% 44%;
-  --warning: 38 92% 56%;
-  --info: 213 94% 62%;
+  --border: 213 18% 22%;
+  --border-strong: 213 14% 48%;
+  --input: 213 18% 30%;
+  --ring: 205 88% 68%;
 
-  --border: 220 14% 22%;
-  --border-strong: 220 12% 36%;
-  --input: 220 14% 22%;
-  --ring: 205 85% 65%;
+  --shadow-color: 213 60% 2%;
+  --sombra-alta: 0 18px 40px -16px hsl(var(--shadow-color) / .7);
 
-  --shadow-color: 0 0% 0%;
-  --sidebar-bg: hsl(213 40% 10%);
-  --sidebar-active-bg: rgba(30, 127, 191, .20);
-  --sidebar-active-text: #8FC7EE;
-  --sidebar-section-label: #8a97a3;
+  --sidebar-bg: 213 44% 5%;
+  --sobre-tinta: 42 24% 90%;
+  --sobre-tinta-suave: 213 10% 58%;
+  --acento-sobre-tinta: 205 88% 68%;
 
   color-scheme: dark;
 }
@@ -109,15 +183,20 @@
 body {
   margin: 0;
   min-height: 100dvh;
-  font-size: 16px;
-  line-height: 1.6;
+  font-family: var(--serif);
+  font-size: 1rem;
+  line-height: 1.55;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   -webkit-font-smoothing: antialiased;
 }
 
-button, input, select, textarea { font: inherit; color: inherit; }
-::selection { background: hsl(var(--primary) / .18); }
+/* El control lleva monoespaciada: es dato, no prosa. */
+button, input, select, textarea { font-family: var(--mono); font-size: var(--t-sm); color: inherit; }
+::selection { background: hsl(var(--primary) / .2); }
+
+/* Las cifras de una columna tienen que cuadrar unas sobre otras. */
+.tabla, .cifra, .id, .meta, .mono, .pasos { font-variant-numeric: tabular-nums; }
 
 /* Para el lector de pantalla y para nadie mas. No se usa display:none ni
    visibility:hidden a proposito: eso lo saca tambien del arbol de
@@ -137,19 +216,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* El salto al contenido: fuera de cuadro hasta que el teclado lo enfoca. */
 .salto {
   position: absolute;
-  z-index: 20;
-  top: 8px;
-  left: 8px;
-  padding: 10px 16px;
-  border-radius: var(--radius-lg);
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  font-size: 14px;
-  font-weight: 600;
+  z-index: 40;
+  top: 0;
+  left: 0;
+  padding: 12px 20px;
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  letter-spacing: .04em;
   text-decoration: none;
   transform: translateY(-200%);
 }
-.salto:focus-visible { transform: translateY(0); outline: 2px solid hsl(var(--foreground)); outline-offset: 2px; }
+.salto:focus-visible { transform: translateY(0); outline: 2px solid hsl(var(--ring)); outline-offset: -4px; }
 
 /* El destino del salto no dibuja un recuadro: el foco esta ahi para que la
    siguiente tabulacion siga desde el contenido, no para senalar nada. */
@@ -157,7 +236,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ───────── Armazon ───────── */
 
-.app { display: grid; grid-template-columns: 248px 1fr; min-height: 100dvh; }
+.app { display: grid; grid-template-columns: 268px 1fr; min-height: 100dvh; }
 
 /* `min-width: 0` no es un detalle: un item de grilla trae `min-width: auto`, o
    sea que se niega a encogerse por debajo de su contenido. Con eso puesto, la
@@ -166,229 +245,337 @@ button, input, select, textarea { font: inherit; color: inherit; }
    envoltura. Con esto, la que se desplaza es la tabla y no la pagina. */
 .app > .lateral, .app > .principal { min-width: 0; }
 
+/* ───────── El indice ─────────
+   Lo que antes era una barra de pestanas ahora es la pagina de contenidos de un
+   impreso: tinta plena, numeros colgando del margen y el titulo en serif. */
+
 .lateral {
   display: flex;
   flex-direction: column;
-  background: var(--sidebar-bg);
+  background: hsl(var(--sidebar-bg));
+  color: hsl(var(--sobre-tinta));
+  /* En oscuro la tinta de la lateral y el papel del fondo quedan a cuatro
+     puntos de luminosidad y la columna se perdia. El filete la separa. */
   border-right: 1px solid hsl(var(--border));
 }
 
-.lateral-cabecera { background: var(--utem-gradient); padding: 18px 20px 16px; }
-.lateral-cabecera h1 { margin: 0; font-size: 19px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
+.lateral-cabecera { padding: var(--e-lg) var(--e-md) var(--e-md) var(--e-lg); }
+.lateral-cabecera h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: var(--t-lg);
+  font-weight: 400;
+  line-height: 1.2;
+}
 .lateral-cabecera p {
-  margin: 3px 0 0;
-  font-size: 11px;
-  font-weight: 500;
+  margin: var(--e-sm) 0 0;
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: .14em;
   text-transform: uppercase;
-  letter-spacing: .08em;
-  color: rgba(255, 255, 255, .72);
+  color: hsl(var(--sobre-tinta-suave));
 }
-.lateral-regla { height: 1px; margin: 12px 0 10px; background: rgba(255, 255, 255, .2); }
-.lateral-nota { margin: 0; font-size: 11px; color: rgba(255, 255, 255, .85); }
 
-.lateral-nav { flex: 1; padding: 14px 12px; overflow-y: auto; }
-.nav-seccion + .nav-seccion { margin-top: 18px; }
+.lateral-nav { flex: 1; padding: var(--e-sm) var(--e-md) var(--e-lg) var(--e-lg); overflow-y: auto; counter-reset: indice; }
+.nav-seccion + .nav-seccion { margin-top: var(--e-lg); }
 .nav-titulo {
-  margin: 0 0 6px;
-  padding: 0 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--sidebar-section-label);
+  margin: 0 0 var(--e-sm);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-weight: 400;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: hsl(var(--sobre-tinta-suave));
 }
-.nav-items { display: flex; flex-direction: column; gap: 2px; }
+.nav-items { display: flex; flex-direction: column; }
 
 .nav-item {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: baseline;
+  gap: var(--e-sm);
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 0;
   border: 0;
-  border-radius: var(--radius-md);
   background: transparent;
-  font-size: 14px;
+  font-family: var(--serif);
+  font-size: var(--t-md);
   text-align: left;
+  color: hsl(var(--sobre-tinta) / .82);
   cursor: pointer;
 }
-.nav-item:hover { background: hsl(var(--muted)); }
-.nav-item.activa { background: var(--sidebar-active-bg); color: var(--sidebar-active-text); font-weight: 600; }
-.nav-item .punto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .55; flex: none; }
-.nav-item.activa .punto { opacity: 1; }
+.nav-item + .nav-item { border-top: 1px solid hsl(var(--sobre-tinta) / .1); }
+
+/* El numero cuelga del margen: es la asimetria de una pagina de contenidos y
+   deja todos los titulos alineados con el resto de la columna. */
+.nav-item::before {
+  counter-increment: indice;
+  content: counter(indice, decimal-leading-zero);
+  position: absolute;
+  left: -24px;
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  color: hsl(var(--sobre-tinta-suave));
+}
+.nav-item:hover { color: hsl(var(--sobre-tinta)); }
+
+/* El activo no se marca con una pildora de fondo sino como se marca en un
+   impreso: subrayado y a tinta plena. */
+.nav-item.activa {
+  color: hsl(var(--sobre-tinta));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--acento-sobre-tinta));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
+}
+.nav-item.activa::before { color: hsl(var(--acento-sobre-tinta)); }
+
+/* El punto: hueco cuando no, lleno cuando si. Un solo color, dos estados. */
+.nav-item .punto { width: 5px; height: 5px; flex: none; border: 1px solid currentColor; background: transparent; }
+.nav-item.activa .punto { background: hsl(var(--acento-sobre-tinta)); border-color: hsl(var(--acento-sobre-tinta)); }
 
 /* ───────── Barra superior ───────── */
 
 .superior {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
+  gap: var(--e-sm) var(--e-md);
+  align-items: baseline;
   justify-content: space-between;
-  padding: 12px 24px;
-  background: hsl(var(--card));
+  padding: var(--e-md) var(--e-xl) var(--e-sm);
   border-bottom: 1px solid hsl(var(--border));
 }
-.superior .izquierda { display: flex; align-items: center; gap: 12px; }
-.superior .derecha { display: flex; align-items: center; gap: 10px; }
+.superior .izquierda { display: flex; align-items: baseline; gap: var(--e-md); flex-wrap: wrap; }
+.superior .derecha { display: flex; align-items: center; gap: var(--e-sm); }
 
-.campo-inline { display: flex; align-items: center; gap: 8px; font-size: 13px; color: hsl(var(--muted-foreground)); }
+.usuario-actual { display: flex; flex-direction: column; line-height: 1.3; }
+.usuario-actual .nombre { font-size: var(--t-md); }
+.usuario-actual .rol { font-family: var(--mono); font-size: var(--t-xs); letter-spacing: .06em; color: hsl(var(--muted-foreground)); }
 
-select, input[type="text"], textarea {
-  padding: 7px 10px;
-  border: 1px solid hsl(var(--input));
-  border-radius: var(--radius-lg);
-  background: hsl(var(--card));
-  font-size: 14px;
+/* ───────── Contenido ─────────
+   Columna de medida legible, pegada a la izquierda. El blanco de la derecha es
+   deliberado: una pagina con todo el ancho lleno no se lee, se escanea. */
+
+.contenido { padding: var(--e-lg) var(--e-xl) var(--e-2xl); max-width: 66rem; }
+
+.titulo-panel {
+  margin: 0 0 var(--e-xs);
+  font-family: var(--serif);
+  font-size: var(--t-2xl);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -.015em;
 }
-select:focus-visible, input:focus-visible, textarea:focus-visible,
-button:focus-visible, .nav-item:focus-visible {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 2px;
+.bajada { margin: 0 0 var(--e-lg); max-width: 56ch; font-size: var(--t-md); line-height: 1.65; color: hsl(var(--muted-foreground)); }
+
+/* La card deja de ser una caja. Lo que separa una seccion de la siguiente es un
+   filete y el aire de encima, igual que en un impreso. */
+.card { padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; }
+.card + .card,
+.nota + .card { margin-top: var(--e-lg); padding-top: var(--e-lg); border-top: 1px solid hsl(var(--border)); }
+.card h3 {
+  margin: 0 0 var(--e-xs);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
 }
-textarea { width: 100%; min-height: 96px; resize: vertical; font-family: "IBM Plex Mono", Consolas, monospace; font-size: 13px; }
+.card .ayuda { margin: 0 0 var(--e-md); max-width: 56ch; font-size: var(--t-sm); line-height: 1.6; color: hsl(var(--muted-foreground)); }
 
-/* ───────── Contenido ───────── */
+.rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0 var(--e-lg); }
 
-.contenido { padding: 24px; max-width: 1180px; }
-
-.titulo-panel { margin: 0 0 4px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
-.bajada { margin: 0 0 20px; color: hsl(var(--muted-foreground)); font-size: 14px; max-width: 72ch; }
-
-.card {
-  padding: 18px 20px;
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-xl);
-  box-shadow: var(--sombra-card);
-}
-.card + .card { margin-top: 16px; }
-.card h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
-.card .ayuda { margin: 0 0 14px; font-size: 13px; color: hsl(var(--muted-foreground)); max-width: 70ch; }
-
-.rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
-
+/* El ramo es una entrada de indice, no una tarjeta. */
 .curso {
-  padding: 14px 16px;
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-lg);
-  box-shadow: var(--sombra-card);
+  padding: var(--e-md) 0;
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
-/* Por el token y no por el azul crudo de la marca: en modo oscuro, #004E9A
-   contra una card oscura casi no se ve, y el borde completo lo delata mas que
-   la franja de antes. El token ya trae su version clara para ese tema. */
-.curso.actual { border-color: hsl(var(--primary) / .6); background: hsl(var(--primary-soft)); }
+.curso h4 { margin: 0; font-family: var(--serif); font-size: var(--t-md); font-weight: 400; line-height: 1.3; text-transform: capitalize; }
+.curso .meta { margin: var(--e-xs) 0 0; font-family: var(--mono); font-size: var(--t-xs); color: hsl(var(--muted-foreground)); }
+.curso.actual h4 { font-weight: 700; }
 
 /* Que el ramo sea de este semestre se decia solo con el color del borde. Quien
    no distingue esos dos azules no se enteraba, asi que ahora tambien se lee. */
 .curso .semestre {
   display: inline-block;
-  margin-top: 8px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: hsl(var(--primary) / .12);
-  color: hsl(var(--primary-strong));
-  font-size: 10.5px;
+  margin-top: var(--e-sm);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
   font-weight: 700;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  letter-spacing: .05em;
+  color: hsl(var(--primary));
 }
-.curso h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; text-transform: capitalize; }
-.curso .meta { margin: 0; font-size: 12px; color: hsl(var(--muted-foreground)); font-family: "IBM Plex Mono", Consolas, monospace; }
 
-.mono { font-family: "IBM Plex Mono", Consolas, monospace; font-size: 12.5px; word-break: break-all; color: hsl(var(--muted-foreground)); }
+.mono { font-family: var(--mono); font-size: var(--t-sm); word-break: break-all; color: hsl(var(--muted-foreground)); }
 
-/* ───────── Controles ───────── */
+/* ───────── Controles ─────────
+   Dos pesos y nada mas: el que hace la accion va a tinta plena, el resto es un
+   filete. Nada de que todo parezca igual de importante. */
 
 .boton {
-  padding: 8px 15px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-lg);
+  padding: 9px 18px;
+  border: 1px solid hsl(var(--primary));
+  border-radius: var(--radius-md);
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
-  font-size: 14px;
-  font-weight: 500;
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  letter-spacing: .04em;
   cursor: pointer;
 }
-.boton:hover { background: hsl(var(--primary-strong)); }
-.boton.suave { background: hsl(var(--card)); border-color: hsl(var(--input)); color: hsl(var(--foreground)); }
-.boton.suave:hover { background: hsl(var(--muted)); }
-.boton.peligro { background: transparent; border-color: hsl(var(--destructive) / .5); color: hsl(var(--destructive)); }
-.boton.peligro:hover { background: hsl(var(--destructive) / .08); }
-.boton[disabled] { opacity: .55; cursor: progress; }
+.boton:hover { background: hsl(var(--primary-strong)); border-color: hsl(var(--primary-strong)); }
 
-.fila { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-.campo { display: flex; flex-direction: column; gap: 5px; }
-.campo label { font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.boton.suave { background: transparent; border-color: hsl(var(--input)); color: hsl(var(--foreground)); }
+.boton.suave:hover { border-color: hsl(var(--foreground)); }
 
-/* ───────── Estados ───────── */
+.boton.peligro { background: transparent; border-color: hsl(var(--input)); color: hsl(var(--muted-foreground)); }
+.boton.peligro:hover { background: hsl(var(--foreground)); border-color: hsl(var(--foreground)); color: hsl(var(--background)); }
+
+.boton[disabled] { opacity: .4; cursor: progress; }
+
+select, input[type="text"], input[type="email"], input[type="password"], input[type="date"], textarea {
+  padding: 8px 10px;
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius-md);
+  background: hsl(var(--card));
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+}
+select:focus-visible, input:focus-visible, textarea:focus-visible,
+button:focus-visible, a:focus-visible, .nav-item:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+textarea { width: 100%; min-height: 96px; resize: vertical; line-height: 1.6; }
+
+.fila { display: flex; flex-wrap: wrap; gap: var(--e-sm) var(--e-md); align-items: flex-end; }
+.campo { display: flex; flex-direction: column; gap: var(--e-xs); }
+.campo label {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+.campo-inline { display: flex; align-items: center; gap: var(--e-sm); font-family: var(--mono); font-size: var(--t-xs); color: hsl(var(--muted-foreground)); }
+.escala input, .campo-inline input[type="checkbox"] { accent-color: hsl(var(--primary)); }
+
+/* ───────── Estados ─────────
+   Sin verde de «bien» ni rojo de «mal». El punto lleno o hueco, la versalita y
+   la palabra que ya venia escrita. */
 
 .insignia {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+  gap: var(--e-sm);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: .1em;
+  text-transform: uppercase;
 }
-.insignia::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.insignia.viva { background: hsl(var(--success) / .12); color: hsl(var(--success)); }
-.insignia.muerta { background: hsl(var(--warning) / .14); color: hsl(var(--warning)); }
+.insignia::before { content: ""; width: 6px; height: 6px; border: 1px solid currentColor; }
+.insignia.viva { color: hsl(var(--primary)); }
+.insignia.viva::before { background: currentColor; }
+.insignia.muerta { color: hsl(var(--muted-foreground)); }
 
+.etiqueta-rol {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+/* El aviso: un filete grueso arriba, la cabecera en versalitas y el texto
+   debajo. Sangrado, para que se lea como una nota al margen y no como una caja
+   de alerta mas. */
 .nota {
-  padding: 12px 16px;
-  border: 1px solid hsl(var(--warning) / .42);
-  border-radius: var(--radius-lg);
-  background: hsl(var(--warning) / .10);
-  font-size: 13.5px;
+  padding: var(--e-sm) 0 var(--e-sm) var(--e-md);
+  border: 0;
+  border-top: 2px solid hsl(var(--foreground));
+  border-radius: 0;
+  background: none;
+  font-size: var(--t-md);
+  line-height: 1.6;
 }
-.nota.buena { border-color: hsl(var(--success) / .42); background: hsl(var(--success) / .08); }
-.nota.mala { border-color: hsl(var(--destructive) / .42); background: hsl(var(--destructive) / .07); }
-.nota strong { display: block; margin-bottom: 2px; }
+.nota strong {
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.nota.buena { border-top-color: hsl(var(--primary)); }
+.nota.buena strong { color: hsl(var(--primary)); }
 
-/* Siete columnas en un telefono sacaban de cuadro la pagina entera. Se
-   desplaza la tabla dentro de su caja y el resto se queda quieto. */
-/* `position: relative` no sobra: sin el, cualquier hijo absoluto de la tabla
-   —el texto solo para lectores del encabezado de acciones, por ejemplo— tiene
-   como referencia el bloque inicial y se escapa del recorte, estirando la
-   pagina 1 px mas alla del telefono. Costo encontrarlo. */
-.tabla-ancha { overflow-x: auto; position: relative; }
-.tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-.tabla-ancha .tabla { min-width: 520px; }
-.tabla th, .tabla td { padding: 9px 10px; text-align: left; border-bottom: 1px solid hsl(var(--border)); }
-.tabla th { font-size: 12px; font-weight: 600; color: hsl(var(--muted-foreground)); text-transform: uppercase; letter-spacing: .05em; }
+/* El error es lo unico que grita, y grita invirtiendose: tinta plena de fondo.
+   Destaca mas que cualquier rojo y no gasta un color de la paleta. */
+.nota.mala { padding: var(--e-md); border: 0; background: hsl(var(--foreground)); color: hsl(var(--background)); }
+
+.tabla { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+.tabla th, .tabla td { padding: 9px var(--e-md) 9px 0; text-align: left; border-bottom: 1px solid hsl(var(--border)); }
+.tabla th {
+  border-bottom: 1px solid hsl(var(--foreground));
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: hsl(var(--foreground));
+}
+.tabla td { font-family: var(--mono); font-size: var(--t-xs); }
 .tabla tr:last-child td { border-bottom: 0; }
 
-.vacio { color: hsl(var(--muted-foreground)); font-style: italic; font-size: 14px; }
+/* Siete columnas en un telefono sacaban de cuadro la pagina entera. Se desplaza
+   la tabla dentro de su caja y el resto se queda quieto. `position: relative`
+   no sobra: sin el, cualquier hijo absoluto de la tabla —el texto solo para
+   lectores del encabezado de acciones, por ejemplo— tiene como referencia el
+   bloque inicial, se escapa del recorte y estira la pagina 1 px mas alla del
+   telefono. Costo encontrarlo. */
+.tabla-ancha { overflow-x: auto; position: relative; }
+.tabla-ancha .tabla { min-width: 520px; }
+
+.vacio { color: hsl(var(--muted-foreground)); font-style: italic; font-size: var(--t-md); }
 .pendiente {
-  padding: 16px 18px;
-  border: 1px dashed hsl(var(--border-strong));
-  border-radius: var(--radius-lg);
-  background: hsl(var(--muted));
+  padding: var(--e-md) 0;
+  max-width: 56ch;
+  border-top: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
   color: hsl(var(--muted-foreground));
-  font-size: 14px;
-  max-width: 68ch;
+  font-size: var(--t-md);
+  font-style: italic;
 }
+
+.ayuda { font-size: var(--t-sm); line-height: 1.6; color: hsl(var(--muted-foreground)); }
 
 @media (max-width: 820px) {
   .app { grid-template-columns: 1fr; }
-  .lateral { border-right: 0; border-bottom: 1px solid hsl(var(--border)); }
-  .lateral-nav { padding: 10px 12px; }
-  .nav-items { flex-direction: row; flex-wrap: wrap; }
-  .contenido { padding: 18px; }
+  .lateral { border-bottom: 1px solid hsl(var(--border)); }
+  .lateral-nav { padding: var(--e-sm) var(--e-md) var(--e-md) var(--e-lg); }
+  .nav-items { flex-direction: row; flex-wrap: wrap; gap: 0 var(--e-lg); }
+  .nav-item + .nav-item { border-top: 0; }
+  .contenido { padding: var(--e-md) var(--e-md) var(--e-xl); }
+  .superior { padding: var(--e-md); }
 
-  /* En el escritorio la densidad del panel administrativo esta bien; con el
-     dedo, 38 px de alto se falla. Solo aqui, para no inflar el escritorio. */
+  /* En el escritorio la densidad del impreso esta bien; con el dedo, 38 px de
+     alto se falla. Solo aqui, para no inflar el escritorio. */
   .nav-item, .boton { min-height: 44px; }
-  .boton { padding: 10px 16px; }
+  .boton { padding: 11px 18px; }
 }
 
-/* Debajo de los 380 px el relleno se come el ancho util: en una tarjeta
-   quedaban menos de 300 px para campos que piden 280. */
+/* Debajo de los 400 px el relleno se come el ancho util. */
 @media (max-width: 400px) {
-  .contenido { padding: 14px 12px; }
-  .card { padding: 16px 14px; }
-  .superior { padding: 12px 14px; }
+  .contenido { padding: var(--e-md) 12px var(--e-xl); }
+  .superior { padding: 12px; }
+  .titulo-panel { font-size: var(--t-xl); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -396,294 +583,203 @@ textarea { width: 100%; min-height: 96px; resize: vertical; font-family: "IBM Pl
 }
 
 /* ───────── Portada de acceso ─────────
-   Dos mitades: a la izquierda que es la plataforma, a la derecha entrar o
-   crear cuenta. En telefono se apilan y la presentacion se recorta: lo que
-   la persona vino a hacer es iniciar sesion, no leer. */
+   Dos mitades asimetricas: la presentacion se lleva lo ancho porque es la que
+   tiene que convencer, y el formulario se queda en una columna estrecha. En
+   telefono se apilan y la presentacion se recorta: lo que la persona vino a
+   hacer es iniciar sesion, no leer. */
 
-.acceso {
-  display: grid;
-  grid-template-columns: 1.05fr .95fr;
-  min-height: 100dvh;
-}
+.acceso { display: grid; grid-template-columns: 1.4fr .6fr; min-height: 100dvh; }
 .acceso[hidden], .app[hidden] { display: none; }
 
 .acceso-presentacion {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 26px;
-  padding: 56px 6vw;
-  background: var(--utem-gradient);
-  color: #fff;
+  gap: var(--e-md);
+  padding: var(--e-2xl) var(--e-xl) var(--e-2xl) 6vw;
+  background: hsl(var(--sidebar-bg));
+  color: hsl(var(--sobre-tinta));
 }
-.acceso-presentacion .sello {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .14em;
-  color: rgba(255, 255, 255, .72);
-}
+.sello { margin: 0; font-family: var(--mono); font-size: var(--t-xs); letter-spacing: .22em; text-transform: uppercase; color: hsl(var(--sobre-tinta-suave)); }
 .acceso-presentacion h1 {
   margin: 0;
-  max-width: 15ch;
-  font-size: clamp(30px, 3.4vw, 44px);
-  font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -.02em;
+  max-width: 17ch;
+  font-family: var(--serif);
+  font-size: clamp(2.1rem, 1.1rem + 2.8vw, 3.5rem);
+  font-weight: 400;
+  line-height: 1.03;
+  letter-spacing: -.022em;
 }
-.acceso-presentacion .lema {
-  margin: 0;
-  max-width: 46ch;
-  font-size: 16.5px;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, .88);
+.lema { margin: 0; max-width: 46ch; font-size: var(--t-lg); line-height: 1.5; color: hsl(var(--sobre-tinta) / .76); }
+
+/* Las ventajas: entradas numeradas con filete, no una lista de palomitas. */
+.ventajas { counter-reset: ventaja; list-style: none; margin: var(--e-md) 0 0; padding: 0; max-width: 52ch; }
+.ventajas li {
+  position: relative;
+  padding: var(--e-md) 0 var(--e-md) var(--e-lg);
+  border-top: 1px solid hsl(var(--sobre-tinta) / .16);
+  font-size: var(--t-sm);
+  line-height: 1.6;
+  color: hsl(var(--sobre-tinta) / .7);
 }
-
-.ventajas { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
-.ventajas li { display: flex; gap: 12px; max-width: 48ch; font-size: 14.5px; line-height: 1.5; color: rgba(255, 255, 255, .92); }
-.ventajas .marca {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  margin-top: 1px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--utem-verde);
-  color: #0b2a12;
-  font-size: 12px;
-  font-weight: 700;
+.ventajas li strong { display: block; font-family: var(--serif); font-size: var(--t-md); font-weight: 400; color: hsl(var(--sobre-tinta)); }
+/* La palomita del HTML sobra: el numero dice lo mismo y ademas ordena. */
+.ventajas .marca { display: none; }
+.ventajas li::before {
+  counter-increment: ventaja;
+  content: counter(ventaja, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: var(--e-md);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  color: hsl(var(--acento-sobre-tinta));
 }
-.ventajas strong { display: block; font-weight: 600; color: #fff; }
+.acceso-pie { margin: var(--e-md) 0 0; font-family: var(--mono); font-size: var(--t-xs); letter-spacing: .06em; color: hsl(var(--sobre-tinta-suave)); }
 
-.acceso-pie { margin: 0; font-size: 12px; color: rgba(255, 255, 255, .6); max-width: 46ch; }
+.acceso-panel { display: flex; align-items: center; padding: var(--e-2xl) 5vw; }
+.acceso-card { width: 100%; max-width: 23rem; }
+.acceso-card h2 { margin: 0 0 var(--e-xs); font-family: var(--serif); font-size: var(--t-xl); font-weight: 400; }
+.acceso-card .ayuda { margin: 0 0 var(--e-md); }
+.acceso-card .campo { margin-bottom: var(--e-md); }
+.acceso-card .campo input { width: 100%; }
+.acceso-card .boton { width: 100%; margin-top: var(--e-sm); padding: 13px; }
 
-/* ───────── Panel de credenciales ───────── */
-
-.acceso-panel {
-  display: grid;
-  place-items: center;
-  padding: 48px 6vw;
-  background: hsl(var(--background));
-}
-.acceso-card { width: 100%; max-width: 400px; }
-.acceso-card h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.015em; }
-.acceso-card .ayuda { margin: 0 0 22px; font-size: 14px; color: hsl(var(--muted-foreground)); }
-
-.cambio-modo {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  margin-bottom: 24px;
-  padding: 4px;
-  border-radius: var(--radius-lg);
-  background: hsl(var(--muted));
-}
+/* Entrar o crear cuenta: dos rotulos y un filete que marca cual esta puesto. */
+.cambio-modo { display: flex; gap: var(--e-md); margin-bottom: var(--e-md); border-bottom: 1px solid hsl(var(--border)); }
 .cambio-modo button {
-  padding: 8px 10px;
+  padding: var(--e-sm) 0;
+  margin-bottom: -1px;
   border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: .1em;
+  text-transform: uppercase;
   color: hsl(var(--muted-foreground));
-  font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
 }
-.cambio-modo button.activa {
-  background: hsl(var(--card));
-  color: hsl(var(--primary));
-  font-weight: 600;
-  box-shadow: var(--sombra-card);
-}
-
-.acceso-card .campo { margin-bottom: 15px; }
-.acceso-card .campo input { width: 100%; }
-.acceso-card .boton { width: 100%; margin-top: 8px; padding: 11px; font-weight: 600; }
-
-input[type="email"], input[type="password"] {
-  padding: 9px 11px;
-  border: 1px solid hsl(var(--input));
-  border-radius: var(--radius-lg);
-  background: hsl(var(--card));
-  font-size: 14px;
-}
+.cambio-modo button.activa { border-bottom-color: hsl(var(--primary)); color: hsl(var(--foreground)); }
 
 @media (max-width: 900px) {
   .acceso { grid-template-columns: 1fr; }
-  .acceso-presentacion { gap: 18px; padding: 40px 24px 32px; }
-  .acceso-presentacion h1 { max-width: none; font-size: 27px; }
+  .acceso-presentacion { gap: var(--e-sm); padding: var(--e-xl) var(--e-md) var(--e-lg); }
+  .acceso-presentacion h1 { max-width: none; }
   /* En pantalla chica la lista de ventajas empuja el formulario fuera de
      vista. Se guarda el lema y se va al grano. */
   .ventajas, .acceso-pie { display: none; }
-  .acceso-panel { padding: 28px 24px 44px; }
+  .acceso-panel { padding: var(--e-lg) var(--e-md) var(--e-xl); }
 }
 
-.usuario-actual { display: flex; flex-direction: column; line-height: 1.25; }
-.usuario-actual .nombre { font-size: 14px; font-weight: 600; }
-.usuario-actual .rol { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: hsl(var(--muted-foreground)); }
+/* ───────── Conversacion ─────────
+   Una transcripcion, no dos columnas de burbujas. Quien habla se dice en
+   versalitas y cada turno se separa con un filete. */
 
-.etiqueta-rol {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: hsl(var(--accent) / .18);
-  color: hsl(var(--accent));
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-
-/* ───────── Conversacion ───────── */
-
-.conversacion { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+.conversacion { display: flex; flex-direction: column; margin: var(--e-md) 0; }
 .conversacion:empty { display: none; }
 
-.turno {
-  padding: 14px 16px;
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-xl);
-  background: hsl(var(--card));
-  box-shadow: var(--sombra-card);
-}
-.turno.mio {
-  margin-left: auto;
-  max-width: 72%;
-  border-color: hsl(var(--primary) / .35);
-  background: hsl(var(--primary-soft));
-}
+.turno { padding: var(--e-md) 0; border: 0; border-top: 1px solid hsl(var(--border)); border-radius: 0; background: none; box-shadow: none; }
+/* El mio va sangrado, como una cita dentro de un impreso. No alineado a la
+   derecha: eso es una burbuja de mensajeria y esto es una transcripcion. */
+.turno.mio { padding-left: var(--e-lg); }
+.turno.mio .quien { color: hsl(var(--primary)); }
 .turno .quien {
-  margin: 0 0 6px;
-  font-size: 11px;
+  margin: 0 0 var(--e-sm);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
   font-weight: 700;
+  letter-spacing: .14em;
   text-transform: uppercase;
-  letter-spacing: .07em;
   color: hsl(var(--muted-foreground));
 }
-.turno .texto { margin: 0; white-space: pre-wrap; font-size: 14.5px; line-height: 1.6; }
+.turno .texto { margin: 0; max-width: 68ch; white-space: pre-wrap; font-size: var(--t-md); line-height: 1.7; }
 .turno.pensando .texto { color: hsl(var(--muted-foreground)); font-style: italic; }
 
-.citas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
-  padding-top: 11px;
-  border-top: 1px solid hsl(var(--border));
-}
-.cita {
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: hsl(var(--muted));
+.citas { display: flex; flex-wrap: wrap; gap: var(--e-sm) var(--e-md); margin-top: var(--e-md); padding-top: var(--e-sm); border-top: 1px solid hsl(var(--border)); }
+.cita { font-family: var(--mono); font-size: var(--t-xs); color: hsl(var(--muted-foreground)); }
+.cita::before { content: "["; }
+.cita::after { content: "]"; }
+.citas .rotulo {
+  align-self: center;
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: .1em;
+  text-transform: uppercase;
   color: hsl(var(--muted-foreground));
-  font-family: "IBM Plex Mono", Consolas, monospace;
-  font-size: 11.5px;
 }
-.citas .rotulo { font-size: 11.5px; color: hsl(var(--muted-foreground)); align-self: center; }
 
 /* ───────── Archivos del ramo ───────── */
 
-.grupo-archivos { margin-top: 16px; }
-.grupo-archivos h3 { display: flex; align-items: baseline; gap: 10px; }
-.grupo-archivos h3 .cuenta { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+.grupo-archivos { margin-top: var(--e-lg); }
+.grupo-archivos h3 { display: flex; align-items: baseline; gap: var(--e-sm); }
+.grupo-archivos h3 .cuenta { font-family: var(--mono); font-size: var(--t-xs); font-weight: 400; letter-spacing: 0; text-transform: none; color: hsl(var(--muted-foreground)); }
 
-.lista-notas { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
-.nota-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border-radius: var(--radius-md);
-  font-size: 13.5px;
-}
-.nota-item:nth-child(odd) { background: hsl(var(--muted) / .6); }
+.lista-notas { display: flex; flex-direction: column; margin-top: var(--e-sm); }
+.nota-item { display: flex; align-items: baseline; gap: var(--e-md); padding: 7px 0; border-top: 1px solid hsl(var(--border)); font-size: var(--t-sm); }
 .nota-item .nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nota-item .id { font-family: "IBM Plex Mono", Consolas, monospace; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+.nota-item .id { font-family: var(--mono); font-size: var(--t-xs); color: hsl(var(--muted-foreground)); }
 
-.marca-chica {
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
+.marca-chica { font-family: var(--mono); font-size: var(--t-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+/* «Le falta texto» se subraya ondulado, como lo marca un corrector. */
+.marca-chica.falta { color: hsl(var(--foreground)); text-decoration: underline wavy; text-underline-offset: 3px; }
+.marca-chica.ok { color: hsl(var(--primary)); }
+
+.nota-item .abrir {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: .06em;
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 3px;
   white-space: nowrap;
 }
-.marca-chica.falta { background: hsl(var(--warning) / .16); color: hsl(var(--warning)); }
-.marca-chica.ok { background: hsl(var(--success) / .13); color: hsl(var(--success)); }
 
-.dato {
-  display: flex;
-  flex-direction: column;
-  padding: 10px 14px;
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-lg);
-  background: hsl(var(--muted) / .5);
-  min-width: 120px;
-}
-.dato .cifra { font-size: 20px; font-weight: 700; line-height: 1.2; }
-.dato .rotulo { font-size: 11.5px; color: hsl(var(--muted-foreground)); }
-.dato.alerta .cifra { color: hsl(var(--warning)); }
+.dato { display: flex; flex-direction: column; min-width: 110px; padding: 0; border: 0; border-radius: 0; background: none; }
+.dato .cifra { font-family: var(--serif); font-size: var(--t-xl); line-height: 1.1; }
+.dato .rotulo { font-family: var(--mono); font-size: var(--t-xs); letter-spacing: .08em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.dato.alerta .cifra { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
 
 /* ───────── Grafo ───────── */
 
 /* El grafo se dibuja en canvas y no en SVG: con 1.252 notas, actualizar
    2.600 elementos del DOM por cuadro dejaba la animacion en 2 cuadros por
    segundo. En canvas es un solo elemento y se repinta entero. */
-.lienzo-grafo { display: block; width: 100%; height: auto; background: hsl(var(--card)); touch-action: none; }
+.lienzo-grafo { display: block; width: 100%; height: auto; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); touch-action: none; }
 
 .globo {
   position: fixed;
   z-index: 30;
   max-width: 320px;
-  padding: 7px 11px;
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-md);
+  padding: var(--e-sm) 10px;
+  border: 1px solid hsl(var(--foreground));
   background: hsl(var(--card));
   box-shadow: var(--sombra-alta);
-  font-size: 12.5px;
+  font-size: var(--t-sm);
   line-height: 1.45;
   pointer-events: none;
 }
 .globo strong { display: block; }
-.globo span { color: hsl(var(--muted-foreground)); font-size: 11.5px; }
+.globo span { font-family: var(--mono); font-size: var(--t-xs); color: hsl(var(--muted-foreground)); }
 
-.leyenda { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.leyenda { display: flex; flex-wrap: wrap; gap: var(--e-sm) var(--e-md); margin-top: var(--e-md); font-family: var(--mono); font-size: var(--t-xs); letter-spacing: .04em; color: hsl(var(--muted-foreground)); }
 .leyenda span { display: flex; align-items: center; gap: 6px; }
-.leyenda i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.leyenda i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
-/* La tarjeta de ramo es un boton: lleva a sus archivos. */
-button.curso {
-  width: 100%;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  position: relative;
-}
-button.curso:hover { border-color: hsl(var(--primary) / .5); box-shadow: var(--sombra-alta); }
+/* La entrada de ramo es un boton: lleva a sus archivos. */
+button.curso { position: relative; width: 100%; text-align: left; color: inherit; cursor: pointer; }
+button.curso:hover h4 { text-decoration: underline; text-underline-offset: 3px; }
 button.curso .ir {
   display: block;
-  margin-top: 8px;
-  font-size: 11.5px;
-  font-weight: 600;
+  margin-top: var(--e-sm);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: .06em;
   color: hsl(var(--primary));
   opacity: 0;
   transition: opacity .15s ease;
 }
 button.curso:hover .ir, button.curso:focus-visible .ir { opacity: 1; }
-
-.nota-item .abrir {
-  padding: 2px 10px;
-  border: 1px solid hsl(var(--primary) / .45);
-  border-radius: 999px;
-  color: hsl(var(--primary));
-  font-size: 11.5px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.nota-item .abrir:hover { background: hsl(var(--primary) / .1); }
-
-/* Grafo vivo: el cursor avisa que los puntos se pueden mover. */
-
 
 /* Cajon de la nota que se abre al pulsar un punto. */
 .cajon {
@@ -691,11 +787,11 @@ button.curso:hover .ir, button.curso:focus-visible .ir { opacity: 1; }
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(520px, 92vw);
+  width: min(560px, 94vw);
   display: flex;
   flex-direction: column;
-  background: hsl(var(--card));
-  border-left: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  border-left: 1px solid hsl(var(--foreground));
   box-shadow: var(--sombra-alta);
   z-index: 20;
 }
@@ -703,107 +799,73 @@ button.curso:hover .ir, button.curso:focus-visible .ir { opacity: 1; }
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
-  padding: 16px 18px;
+  gap: var(--e-md);
+  padding: var(--e-md) var(--e-lg);
   border-bottom: 1px solid hsl(var(--border));
 }
-.cajon-cabecera h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
-.cajon-cabecera .boton { padding: 6px 12px; font-size: 13px; text-decoration: none; }
+.cajon-cabecera h3 { margin: 0 0 var(--e-xs); font-family: var(--serif); font-size: var(--t-lg); font-weight: 400; letter-spacing: 0; text-transform: none; }
+.cajon-cabecera .boton { padding: 6px 12px; text-decoration: none; }
 .cajon-cuerpo {
   flex: 1;
   margin: 0;
-  padding: 18px;
+  padding: var(--e-lg);
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: "IBM Plex Mono", Consolas, monospace;
-  font-size: 12.5px;
-  line-height: 1.65;
+  font-family: var(--mono);
+  font-size: var(--t-sm);
+  line-height: 1.7;
 }
 
 /* ───────── Adopcion y encuesta ───────── */
 
-/* Las cuatro cifras de arriba del panel. Tarjetas iguales que reparten el
-   ancho, para que ninguna parezca mas importante que otra por ser mas grande. */
-.metrica {
-  flex: 1 1 160px;
-  padding: 14px 16px;
-  border: 1px solid hsl(var(--border));
-  border-radius: 12px;
-  background: hsl(var(--card));
-}
-.metrica .cifra {
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.1;
-  color: hsl(var(--primary));
-}
-.metrica .rotulo {
-  margin-top: 4px;
-  font-size: 12px;
-  color: hsl(var(--muted-foreground));
-}
-.metrica .detalle { font-size: 12px; color: hsl(var(--muted-foreground)); }
+/* Las cuatro cifras de arriba. Sin tarjetas y sin numero gigante de color: la
+   cifra en serif, el rotulo en versalitas debajo y un filete que las separa en
+   columnas, como el cuadro de un informe. */
+.metrica { flex: 1 1 150px; padding: 0 var(--e-md); border: 0; border-left: 1px solid hsl(var(--border)); border-radius: 0; background: none; }
+.metrica:first-child { padding-left: 0; border-left: 0; }
+.metrica .cifra { font-family: var(--serif); font-size: var(--t-2xl); font-weight: 400; line-height: 1.05; color: hsl(var(--foreground)); }
+.metrica .rotulo { margin-top: var(--e-xs); font-family: var(--mono); font-size: var(--t-xs); letter-spacing: .08em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+.metrica .detalle { font-size: var(--t-sm); color: hsl(var(--muted-foreground)); }
 
-/* Si / no de una columna. Verde y rojo, pero con el texto escrito: el color
-   solo no sirve para quien no lo distingue. */
-.pill {
-  display: inline-block;
-  padding: 2px 9px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
-}
-.pill.si { background: hsl(var(--success) / .14); color: hsl(var(--success)); }
-.pill.no { background: hsl(var(--destructive) / .12); color: hsl(var(--destructive)); }
-.pill.tibio { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+/* Si / no de una columna. Ya traia la palabra escrita, que es lo que de verdad
+   vale; ahora el peso y el tachado hacen el resto, sin gastar un color. */
+.pill { display: inline-block; font-family: var(--mono); font-size: var(--t-xs); letter-spacing: .08em; text-transform: uppercase; }
+.pill.si { font-weight: 700; color: hsl(var(--primary)); }
+.pill.no { color: hsl(var(--foreground)); text-decoration: line-through; }
+.pill.tibio { color: hsl(var(--muted-foreground)); }
 
 /* Los tres pasos del recorrido, en chico, dentro de la celda. */
-.pasos { display: inline-flex; gap: 4px; }
+.pasos { display: inline-flex; gap: 3px; }
 .pasos span {
-  width: 22px;
+  width: 20px;
+  padding: 1px 0;
+  border: 1px solid hsl(var(--border-strong));
   text-align: center;
-  border-radius: 4px;
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 2px 0;
-  background: hsl(var(--muted));
+  font-family: var(--mono);
+  font-size: var(--t-xs);
   color: hsl(var(--muted-foreground));
 }
-.pasos span.hecho { background: hsl(var(--success) / .16); color: hsl(var(--success)); }
+.pasos span.hecho { border-color: hsl(var(--primary)); background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
 
-.nota-inline { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+.nota-inline { font-family: var(--mono); font-size: var(--t-xs); color: hsl(var(--muted-foreground)); }
 
 /* Una pregunta de la encuesta. */
-.pregunta { padding: 14px 0; border-bottom: 1px solid hsl(var(--border)); }
+.pregunta { padding: var(--e-md) 0; border-bottom: 1px solid hsl(var(--border)); }
 .pregunta:last-child { border-bottom: 0; }
-.pregunta > label, .pregunta .enunciado {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.pregunta .ayuda-p { font-size: 12.5px; color: hsl(var(--muted-foreground)); margin-bottom: 8px; }
-.pregunta textarea {
-  width: 100%;
-  min-height: 70px;
-  resize: vertical;
-  font: inherit;
-  padding: 9px 11px;
-  border: 1px solid hsl(var(--border-strong));
-  border-radius: 9px;
-  background: hsl(var(--card));
-  color: hsl(var(--foreground));
-}
-.escala { display: flex; gap: 8px; flex-wrap: wrap; }
+.pregunta > label, .pregunta .enunciado { display: block; margin-bottom: var(--e-xs); font-size: var(--t-md); }
+.pregunta .ayuda-p { margin-bottom: var(--e-sm); font-size: var(--t-sm); color: hsl(var(--muted-foreground)); }
+.pregunta textarea { width: 100%; min-height: 70px; resize: vertical; color: hsl(var(--foreground)); }
+
+.escala { display: flex; gap: var(--e-sm); flex-wrap: wrap; }
 .escala label {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 11px;
-  border: 1px solid hsl(var(--border-strong));
-  border-radius: 9px;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid hsl(var(--input));
+  font-family: var(--mono);
+  font-size: var(--t-xs);
   cursor: pointer;
-  font-size: 13.5px;
 }
-.escala input:checked + span { font-weight: 700; color: hsl(var(--primary)); }
+.escala label:hover { border-color: hsl(var(--foreground)); }

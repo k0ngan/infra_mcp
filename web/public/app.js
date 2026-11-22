@@ -224,7 +224,10 @@ async function cargarMaterial() {
 
   try {
     const datos = await pedir("/api/material");
-    $("#ruta-vault").textContent = `${datos.vault}\\${datos.subdir}`;
+    // El separador sale de la propia ruta: con «\\» fijo, en el contenedor
+    // —que es Linux— la ruta salia como /app/vaults/alguien\\Canvas.
+    const barra = datos.vault.includes("\\") ? "\\" : "/";
+    $("#ruta-vault").textContent = `${datos.vault}${barra}${datos.subdir}`;
     pintarSesionCanvas(datos.sesion.viva);
 
     // El material se muestra aunque la sesion este caida: esta en disco y no
@@ -512,9 +515,29 @@ async function verArchivos() {
 
 /* ───────── Grafo del vault ───────── */
 
+/*
+ * Los seis tipos de nota, en una sola familia.
+ *
+ * Antes eran un arcoiris: azul, celeste, verde, ambar, gris y morado, un color
+ * por tipo elegido sin relacion entre si. Contra el resto de la pantalla
+ * —papel, tinta y un acento— el grafo parecia de otra aplicacion.
+ *
+ * Ahora los seis salen del mismo eje azul-tinta y se distinguen por claridad,
+ * no por tono. El unico que se sale es el anuncio: es el tipo que avisa de
+ * algo, conviene que salte, y un ocre apagado lo consigue sin traer un color
+ * saturado a la paleta.
+ *
+ * Es el unico sitio de la interfaz con mas de tres valores, y es a proposito:
+ * seis categorias necesitan seis marcas distinguibles, y la leyenda esta justo
+ * debajo del lienzo para nombrarlas.
+ */
 const COLOR_TIPO = {
-  modulo: "#004E9A", pagina: "#1E7FBF", tarea: "#7AB82F",
-  anuncio: "#D97706", archivo: "#7C8894", discusion: "#9B59B6",
+  modulo: "#004E9A",     // el acento: el nodo que estructura
+  pagina: "#6BA3D6",     // azul claro
+  tarea: "#13263A",      // casi tinta
+  anuncio: "#A8762F",    // el unico calido: es el que avisa
+  archivo: "#9BA5B0",    // pizarra clara
+  discusion: "#5A6B7D",  // pizarra media
 };
 
 const ANCHO_GRAFO = 1400, ALTO_GRAFO = 900;
@@ -682,7 +705,7 @@ function dibujarGrafo({ nodos, aristas }) {
       }
     }
 
-    ctx.font = `600 ${10 / vista.escala}px 'IBM Plex Sans', system-ui, sans-serif`;
+    ctx.font = `${10 / vista.escala}px ui-monospace, 'Cascadia Mono', Consolas, monospace`;
     ctx.textAlign = "center";
     ctx.lineWidth = 3 / vista.escala;
     ctx.strokeStyle = `hsl(${fondo})`;

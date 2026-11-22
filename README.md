@@ -282,19 +282,42 @@ verdad se salta sola —eso ya lo cubre la imagen de Docker.
 
 ## Diseño visual
 
-La estructura es la del proyecto ODS: los mismos tokens HSL, el lienzo gris con cards blancas y
-bordes marcados, la barra lateral con cabecera en degradado y el modo oscuro por `[data-theme]`.
-Va en CSS plano: el proyecto no tiene mas dependencia que el MCP, y no iba a
-sumar uno para pintar botones.
+**La pantalla se parece a lo que la plataforma fabrica.** Lo que sale de aquí son guías
+tipografiadas en LaTeX y un vault de Obsidian: documentos. Durante un tiempo la pantalla fue otra
+cosa —un panel de control con lienzo gris, cards blancas con sombra, cabecera en degradado y seis
+variantes distintas de píldora de 999 px—, que es exactamente lo primero que sale cuando una
+aplicación tiene nueve secciones y tablas. Se notaba que era lo primero que salió.
 
-La marca, en cambio, es de la UTEM: azul institucional `#004E9A`, verde `#7AB82F` y `#021C36` para
-los fondos profundos. **Esos valores vienen de Brandfetch, no del manual oficial**: el PDF del
-Manual de Identidad Visual 2025 que publica utem.cl responde 404 y la página de identidad no lista
-códigos. Si el manual dice otra cosa, se cambian los tres valores `--utem-*` en `estilo.css` y lo
-demás se acomoda solo.
+Ahora es un impreso: filetes de 1 px en vez de cajas, un **índice numerado** en lugar de una barra
+de pestañas, y el blanco puesto donde separa. La estructura —lateral, barra superior, paneles— se
+queda como estaba, porque para nueve secciones funciona; lo que cambió es el tratamiento.
 
-IBM Plex se declara primero en la pila de fuentes y cae a `system-ui` si no está instalada. No se
-trae por CDN a propósito: la plataforma tiene que levantar sin red.
+**Tres valores y se acabó: papel, tinta y un acento.** La tinta es el `#021C36` de la UTEM y el
+acento su azul `#004E9A`. No hay verde de «bien» ni rojo de «mal»: el estado se dice con la palabra
+escrita, con versalitas y con un punto lleno o hueco. Lo único que grita es el error, y grita
+invirtiéndose a tinta plena, que destaca más que cualquier rojo y no gasta un color de la paleta.
+El verde `#7AB82F` de la marca quedó fuera: con tres valores en total no caben dos acentos.
+
+> Los colores vienen de Brandfetch, no del manual oficial: el PDF del Manual de Identidad Visual
+> 2025 que publica utem.cl responde 404 y la página de identidad no lista códigos. Si el manual
+> dice otra cosa, se cambian los `--utem-*` en `estilo.css`.
+
+**Palatino para la estructura, Cascadia o Consolas para el dato.** Ninguna se trae por CDN —la
+plataforma tiene que levantar sin red—, así que se elige dentro de lo que ya está instalado:
+`ui-serif` resuelve Palatino en Apple y «Palatino Linotype» en Windows. Es una serif de libro de
+verdad, no la Georgia que sale por descarte. La monoespaciada va donde hay dato —rótulos, cifras,
+rutas, identificadores y los propios botones—, que es donde significa algo, y no como disfraz de
+«esto es técnico». No hay sans, a propósito: serif + monoespaciada es la pareja de un documento
+técnico, que es justo lo que esto produce.
+
+El único sitio con más de tres tonos es el **grafo**, y es inevitable: seis tipos de nota necesitan
+seis marcas distinguibles. Antes eran un arcoíris de seis colores sin relación entre sí; ahora
+salen todos del mismo eje azul-tinta y se distinguen por claridad, salvo el anuncio —el tipo que
+avisa— que lleva el único ocre.
+
+Todo en CSS plano, sin Tailwind y sin paso de compilación: el proyecto no tiene más dependencia que
+el MCP y no iba a sumar una para pintar botones. El modo oscuro va por `[data-theme]` y **ningún
+texto baja de 4,5:1 de contraste en ninguno de los dos temas**, medido sobre la página.
 
 ## Estructura
 
