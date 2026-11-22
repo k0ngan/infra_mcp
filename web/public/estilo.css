@@ -291,9 +291,7 @@ button, input, select, textarea { font-family: var(--mono); font-size: var(--t-s
 
 .nav-item {
   position: relative;
-  display: flex;
-  align-items: baseline;
-  gap: var(--e-sm);
+  display: block;
   width: 100%;
   padding: 7px 0;
   border: 0;
@@ -330,9 +328,6 @@ button, input, select, textarea { font-family: var(--mono); font-size: var(--t-s
 }
 .nav-item.activa::before { color: hsl(var(--acento-sobre-tinta)); }
 
-/* El punto: hueco cuando no, lleno cuando si. Un solo color, dos estados. */
-.nav-item .punto { width: 5px; height: 5px; flex: none; border: 1px solid currentColor; background: transparent; }
-.nav-item.activa .punto { background: hsl(var(--acento-sobre-tinta)); border-color: hsl(var(--acento-sobre-tinta)); }
 
 /* ───────── Barra superior ───────── */
 
