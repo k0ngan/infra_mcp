@@ -1,0 +1,52 @@
+# Los 70 tests, corriendo fuera de la maquina donde se escribieron.
+#
+# El proyecto se llama Infraestructura para Ciencia de Datos y presume de
+# ambiente reproducible: que el repositorio lo demuestre solo, en una maquina
+# limpia, es parte del punto y no un adorno.
+#
+# Node 18 y 24 son los dos extremos del rango que declara `engines`. Si algo se
+# rompe en el piso o en el techo, conviene saberlo aqui y no en la presentacion.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["18", "24"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # La unica dependencia es el MCP de Canvas, fijado por commit. npm lo
+      # anoto en el lock con una URL `git+ssh://`, que aqui no sirve: el runner
+      # no tiene llave SSH de nadie. Se reescribe a HTTPS por variable de
+      # entorno en vez de tocar el lock, para que el commit fijado siga siendo
+      # exactamente el mismo que se instala en local.
+      - name: Instalar dependencias
+        env:
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: url.https://github.com/.insteadOf
+          GIT_CONFIG_VALUE_0: ssh://git@github.com/
+        run: npm ci
+
+      # Sin LaTeX a proposito: `test/latex.test.mjs` se salta la compilacion de
+      # verdad cuando no hay `pdflatex` y comprueba el resto igual. Instalar
+      # TeX Live aqui serian varios minutos por cada corrida para probar algo
+      # que la imagen de Docker ya cubre.
+      - name: Correr los tests
+        run: npm test
+
+      - name: Revisar que el servidor parsea
+        run: npm run check

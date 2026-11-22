@@ -2,6 +2,8 @@
 
 Proyecto semestral de **INFB6074 — Infraestructura para Ciencia de Datos**, UTEM 2026-2.
 
+[![tests](https://github.com/k0ngan/infra_mcp/actions/workflows/test.yml/badge.svg)](https://github.com/k0ngan/infra_mcp/actions/workflows/test.yml)
+
 Lee Canvas con el MCP que ya está escrito, ordena el material en **un vault de Obsidian por
 usuario** y arma **guías de estudio en LaTeX que compila a PDF**. Un modelo local sobre Ollama
 redacta la prosa; todo lo demás es código determinístico.
@@ -272,6 +274,12 @@ petición, que quien se registró y nunca volvió desaparezca del cuadro —just
 mirar—, que «terminó» se ponga en verdadero sin haber generado una guía, y que el resumen
 arrastre el hash de una contraseña.
 
+Y corren **fuera de esta máquina** en cada push: `.github/workflows/test.yml` las pasa en Node 18
+y en Node 24, los dos extremos del rango que declara `engines`. Es la parte verificable de
+«ambiente reproducible»: si clonar el repositorio y correrlo solo funciona en el portátil donde se
+escribió, no era reproducible. Ahí no hay LaTeX a propósito, así que la prueba que compila de
+verdad se salta sola —eso ya lo cubre la imagen de Docker.
+
 ## Diseño visual
 
 La estructura es la del proyecto ODS: los mismos tokens HSL, el lienzo gris con cards blancas y
@@ -309,6 +317,7 @@ Dockerfile                  Node fijado + la instalacion minima de LaTeX
 docker-compose.yml          el servicio web; Ollama se queda en el anfitrion
 .env.example                todas las variables, con lo que hace cada una
 usuarios.example.json       plantilla de configuracion (usuarios.json no se versiona)
+.github/workflows/         los tests en Node 18 y 24, en cada push
 ```
 
 ## Lo que no entra al repositorio
@@ -316,3 +325,8 @@ usuarios.example.json       plantilla de configuracion (usuarios.json no se vers
 Cookies de Canvas, claves de sesión y tokens. Ni en el código, ni en la documentación, ni en los
 comandos registrados. `usuarios.json` está en `.gitignore` porque guarda los hashes de las
 contraseñas; las cookies de Canvas no están ahí ni en ninguna parte del repositorio.
+
+## Licencia
+
+MIT, en `LICENSE`. El material de clase que la plataforma ordena **no** lo cubre: eso es de quien
+lo escribió, vive en el vault de cada persona y no se versiona.
