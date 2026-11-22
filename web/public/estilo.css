@@ -119,9 +119,52 @@ body {
 button, input, select, textarea { font: inherit; color: inherit; }
 ::selection { background: hsl(var(--primary) / .18); }
 
+/* Para el lector de pantalla y para nadie mas. No se usa display:none ni
+   visibility:hidden a proposito: eso lo saca tambien del arbol de
+   accesibilidad, que es justo lo que se quiere conservar. */
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* El salto al contenido: fuera de cuadro hasta que el teclado lo enfoca. */
+.salto {
+  position: absolute;
+  z-index: 20;
+  top: 8px;
+  left: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+.salto:focus-visible { transform: translateY(0); outline: 2px solid hsl(var(--foreground)); outline-offset: 2px; }
+
+/* El destino del salto no dibuja un recuadro: el foco esta ahi para que la
+   siguiente tabulacion siga desde el contenido, no para senalar nada. */
+.contenido:focus { outline: none; }
+
 /* ───────── Armazon ───────── */
 
 .app { display: grid; grid-template-columns: 248px 1fr; min-height: 100dvh; }
+
+/* `min-width: 0` no es un detalle: un item de grilla trae `min-width: auto`, o
+   sea que se niega a encogerse por debajo de su contenido. Con eso puesto, la
+   tabla de siete columnas estiraba la columna entera a 520 px y sacaba de
+   cuadro la pagina completa en el telefono, por mas `overflow-x` que tuviera su
+   envoltura. Con esto, la que se desplaza es la tabla y no la pagina. */
+.app > .lateral, .app > .principal { min-width: 0; }
 
 .lateral {
   display: flex;
@@ -227,11 +270,28 @@ textarea { width: 100%; min-height: 96px; resize: vertical; font-family: "IBM Pl
   padding: 14px 16px;
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
-  border-left: 3px solid hsl(var(--border-strong));
   border-radius: var(--radius-lg);
   box-shadow: var(--sombra-card);
 }
-.curso.actual { border-left-color: var(--utem-azul); background: hsl(var(--primary-soft)); }
+/* Por el token y no por el azul crudo de la marca: en modo oscuro, #004E9A
+   contra una card oscura casi no se ve, y el borde completo lo delata mas que
+   la franja de antes. El token ya trae su version clara para ese tema. */
+.curso.actual { border-color: hsl(var(--primary) / .6); background: hsl(var(--primary-soft)); }
+
+/* Que el ramo sea de este semestre se decia solo con el color del borde. Quien
+   no distingue esos dos azules no se enteraba, asi que ahora tambien se lee. */
+.curso .semestre {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: hsl(var(--primary) / .12);
+  color: hsl(var(--primary-strong));
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
 .curso h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; text-transform: capitalize; }
 .curso .meta { margin: 0; font-size: 12px; color: hsl(var(--muted-foreground)); font-family: "IBM Plex Mono", Consolas, monospace; }
 
@@ -277,17 +337,24 @@ textarea { width: 100%; min-height: 96px; resize: vertical; font-family: "IBM Pl
 
 .nota {
   padding: 12px 16px;
-  border: 1px solid hsl(var(--border));
-  border-left: 3px solid hsl(var(--warning));
+  border: 1px solid hsl(var(--warning) / .42);
   border-radius: var(--radius-lg);
   background: hsl(var(--warning) / .10);
   font-size: 13.5px;
 }
-.nota.buena { border-left-color: hsl(var(--success)); background: hsl(var(--success) / .08); }
-.nota.mala { border-left-color: hsl(var(--destructive)); background: hsl(var(--destructive) / .07); }
+.nota.buena { border-color: hsl(var(--success) / .42); background: hsl(var(--success) / .08); }
+.nota.mala { border-color: hsl(var(--destructive) / .42); background: hsl(var(--destructive) / .07); }
 .nota strong { display: block; margin-bottom: 2px; }
 
+/* Siete columnas en un telefono sacaban de cuadro la pagina entera. Se
+   desplaza la tabla dentro de su caja y el resto se queda quieto. */
+/* `position: relative` no sobra: sin el, cualquier hijo absoluto de la tabla
+   —el texto solo para lectores del encabezado de acciones, por ejemplo— tiene
+   como referencia el bloque inicial y se escapa del recorte, estirando la
+   pagina 1 px mas alla del telefono. Costo encontrarlo. */
+.tabla-ancha { overflow-x: auto; position: relative; }
 .tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tabla-ancha .tabla { min-width: 520px; }
 .tabla th, .tabla td { padding: 9px 10px; text-align: left; border-bottom: 1px solid hsl(var(--border)); }
 .tabla th { font-size: 12px; font-weight: 600; color: hsl(var(--muted-foreground)); text-transform: uppercase; letter-spacing: .05em; }
 .tabla tr:last-child td { border-bottom: 0; }
@@ -309,6 +376,19 @@ textarea { width: 100%; min-height: 96px; resize: vertical; font-family: "IBM Pl
   .lateral-nav { padding: 10px 12px; }
   .nav-items { flex-direction: row; flex-wrap: wrap; }
   .contenido { padding: 18px; }
+
+  /* En el escritorio la densidad del panel administrativo esta bien; con el
+     dedo, 38 px de alto se falla. Solo aqui, para no inflar el escritorio. */
+  .nav-item, .boton { min-height: 44px; }
+  .boton { padding: 10px 16px; }
+}
+
+/* Debajo de los 380 px el relleno se come el ancho util: en una tarjeta
+   quedaban menos de 300 px para campos que piden 280. */
+@media (max-width: 400px) {
+  .contenido { padding: 14px 12px; }
+  .card { padding: 16px 14px; }
+  .superior { padding: 12px 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

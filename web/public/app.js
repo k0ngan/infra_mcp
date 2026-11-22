@@ -59,6 +59,28 @@ function avisoDeError(elemento, titulo, error) {
   nota(elemento, titulo, ` ${error.message}`, "mala");
 }
 
+/*
+ * Lo mismo que dice la caja de aviso, dicho tambien en voz alta.
+ *
+ * Sincronizar un ramo y armar una guia son minutos, y el avance se pintaba en
+ * la caja y nada mas: quien no la ve se quedaba mirando un boton apagado sin
+ * saber si quedaban dos ramos o doce.
+ *
+ * Es UNA region, siempre en el DOM y nunca oculta. Poner `aria-live` en cada
+ * caja de aviso no sirve: esas aparecen y desaparecen con [hidden], y una
+ * region viva que entra y sale del arbol de accesibilidad no se anuncia de
+ * forma fiable. Y se compara con lo anterior porque el avance se repregunta
+ * cada tres segundos: sin eso, el mismo "4 de 12" se repetiria solo.
+ */
+let ultimoAnuncio = "";
+
+function anunciar(texto) {
+  const limpio = texto.trim();
+  if (!limpio || limpio === ultimoAnuncio) return;
+  ultimoAnuncio = limpio;
+  $("#anuncio").textContent = limpio;
+}
+
 function nota(elemento, titulo, detalle, tono = "") {
   elemento.className = `nota ${tono}`.trim();
   elemento.innerHTML = "";
@@ -69,6 +91,7 @@ function nota(elemento, titulo, detalle, tono = "") {
   }
   if (detalle) elemento.append(document.createTextNode(detalle));
   elemento.hidden = false;
+  anunciar(`${titulo || ""} ${detalle || ""}`);
 }
 
 const ocultar = elemento => { elemento.hidden = true; };
@@ -166,6 +189,15 @@ function tarjetaDeCurso(curso) {
   meta.textContent = curso.course_id ? `course_id ${curso.course_id}` : curso.carpeta;
 
   tarjeta.append(titulo, meta);
+
+  // Antes esto se sabia solo por el color del borde, y entre los dos azules no
+  // todo el mundo distingue. Ahora tambien se lee.
+  if (curso.semestral) {
+    const semestre = document.createElement("span");
+    semestre.className = "semestre";
+    semestre.textContent = "semestre actual";
+    tarjeta.append(semestre);
+  }
 
   if (curso.course_id) {
     tarjeta.type = "button";
@@ -931,6 +963,11 @@ async function abrirNota(nodo) {
   $("#cajon-abrir").hidden = true;
   cajon.hidden = false;
 
+  // El cajon se abre al pulsar un punto del grafo, lejos de aqui en la pagina.
+  // Sin mover el foco, con teclado o lector de pantalla no hay forma de saber
+  // que aparecio algo ni de llegar a leerlo.
+  cajon.focus();
+
   try {
     // El nodo trae su propio ramo: en el grafo global conviven veinte.
     const curso = nodo.course_id ?? estado.ramoAbierto;
@@ -1642,9 +1679,15 @@ function irAPanel(nombre) {
 function activarNavegacion() {
   for (const boton of document.querySelectorAll(".lateral-nav .nav-item")) {
     boton.addEventListener("click", () => {
-      for (const otro of document.querySelectorAll(".lateral-nav .nav-item")) otro.classList.remove("activa");
+      for (const otro of document.querySelectorAll(".lateral-nav .nav-item")) {
+        otro.classList.remove("activa");
+        // La clase pinta; aria-current es lo que se dice. Sin esto, con lector
+        // de pantalla los nueve items suenan exactamente igual.
+        otro.removeAttribute("aria-current");
+      }
       for (const panel of document.querySelectorAll(".panel")) panel.hidden = true;
       boton.classList.add("activa");
+      boton.setAttribute("aria-current", "page");
       $(`#panel-${boton.dataset.panel}`).hidden = false;
       if (boton.dataset.panel === "usuarios") cargarUsuarios();
       if (boton.dataset.panel === "encuesta") cargarEncuesta();
@@ -1728,7 +1771,20 @@ function inicio() {
   $("#ver-grafo").addEventListener("click", verGrafo);
   $("#soltar-fijados").addEventListener("click", () => simulacion?.soltarFijados?.());
   $("#reencuadrar").addEventListener("click", () => simulacion?.reencuadrar?.());
-  $("#cajon-cerrar").addEventListener("click", () => { $("#cajon").hidden = true; });
+  const cerrarCajon = () => {
+    const cajon = $("#cajon");
+    if (cajon.hidden) return;
+    cajon.hidden = true;
+    // El foco vuelve al grafo, que es de donde salio. Si se deja en un
+    // elemento que acaba de ocultarse, la siguiente tabulacion empieza de cero
+    // arriba de la pagina.
+    $("#lienzo-grafo").focus({ preventScroll: true });
+  };
+
+  $("#cajon-cerrar").addEventListener("click", cerrarCajon);
+  document.addEventListener("keydown", evento => {
+    if (evento.key === "Escape") cerrarCajon();
+  });
   $("#limpiar-chat").addEventListener("click", () => {
     estado.chat = [];
     $("#conversacion").replaceChildren();

@@ -4,6 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Plataforma de estudio UTEM</title>
+  <meta name="description" content="Ordena tu material de Canvas en un vault de Obsidian y arma guias de estudio en PDF que citan tus propios apuntes.">
+
+  <!-- Los dos: el navegador pinta su barra con el que corresponda al tema que
+       tenga puesto el sistema, igual que hace el CSS mas abajo. -->
+  <meta name="theme-color" content="#004E9A" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#021C36" media="(prefers-color-scheme: dark)">
+
+  <!-- Va embebido, no como archivo: asi no hay una peticion mas ni un 404 en
+       cada carga, y se mantiene la regla de que la plataforma levanta sin red. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23021C36'/%3E%3Crect x='9' y='7' width='14' height='18' rx='2' fill='%23fff'/%3E%3Crect x='12' y='11' width='8' height='2' fill='%23004E9A'/%3E%3Crect x='12' y='15' width='8' height='2' fill='%23004E9A'/%3E%3Crect x='12' y='19' width='5' height='2' fill='%237AB82F'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
@@ -79,6 +89,10 @@
 
   <!-- ───────── Aplicacion ───────── -->
   <div id="app" class="app" hidden>
+    <!-- Con el teclado, llegar al contenido costaba pasar por los nueve items
+         del menu, uno por uno, en cada panel. -->
+    <a class="salto" href="#contenido">Saltar al contenido</a>
+
     <aside class="lateral">
       <div class="lateral-cabecera">
         <h1>Plataforma de estudio</h1>
@@ -91,7 +105,7 @@
         <div class="nav-seccion">
           <p class="nav-titulo">Estudio</p>
           <div class="nav-items">
-            <button class="nav-item activa" data-panel="material"><span class="punto"></span>Material</button>
+            <button class="nav-item activa" data-panel="material" aria-current="page"><span class="punto"></span>Material</button>
             <button class="nav-item" data-panel="archivos"><span class="punto"></span>Archivos</button>
             <button class="nav-item" data-panel="grafo"><span class="punto"></span>Grafo</button>
             <button class="nav-item" data-panel="guias"><span class="punto"></span>Guias</button>
@@ -110,7 +124,7 @@
       </nav>
     </aside>
 
-    <div>
+    <div class="principal">
       <header class="superior">
         <div class="izquierda">
           <div class="usuario-actual">
@@ -126,7 +140,7 @@
         </div>
       </header>
 
-      <main class="contenido">
+      <main id="contenido" class="contenido" tabindex="-1">
 
         <!-- Material -->
         <section id="panel-material" class="panel">
@@ -237,12 +251,13 @@
 
           <div class="card">
             <h3>Registrados</h3>
-            <table class="tabla">
+            <div class="tabla-ancha"><table class="tabla">
               <thead>
-                <tr><th>Usuario</th><th>Rol</th><th>Vault</th><th>Cookie</th><th></th></tr>
+                <tr><th scope="col">Usuario</th><th scope="col">Rol</th><th scope="col">Vault</th><th scope="col">Cookie</th><th scope="col"><span class="solo-lectores">Acciones</span></th></tr>
               </thead>
               <tbody id="tabla-usuarios"></tbody>
             </table>
+            </div>
           </div>
         </section>
 
@@ -284,15 +299,18 @@
               pegar la cookie, sincronizar un ramo y generar una guia. Quien no,
               se quedo en alguno, y la columna Pasos dice en cual.
             </p>
-            <table class="tabla">
+            <div class="tabla-ancha"><table class="tabla">
               <thead>
                 <tr>
-                  <th>Usuario</th><th>Termino</th><th>Pasos</th><th>Uso</th>
-                  <th>Dias activos</th><th>Ultima vez</th><th>Encuesta</th>
+                  <th scope="col">Usuario</th><th scope="col">Termino</th>
+                  <th scope="col">Pasos</th><th scope="col">Uso</th>
+                  <th scope="col">Dias activos</th><th scope="col">Ultima vez</th>
+                  <th scope="col">Encuesta</th>
                 </tr>
               </thead>
               <tbody id="tabla-adopcion"></tbody>
             </table>
+            </div>
           </div>
 
           <div class="card">
@@ -345,8 +363,12 @@
           </div>
 
           <div class="card" style="padding:0; overflow:hidden">
+            <!-- Enfocable para que cerrar el cajon con Escape devuelva el foco
+                 aqui, que es de donde salio. El grafo en si se maneja con el
+                 puntero: las mismas notas se abren con el teclado desde
+                 Archivos, y eso esta anotado en el README. -->
             <canvas id="lienzo-grafo" class="lienzo-grafo" width="1400" height="900"
-                    role="img" aria-label="Grafo de notas del vault"></canvas>
+                    tabindex="0" role="img" aria-label="Grafo de notas del vault"></canvas>
             <div id="globo" class="globo" hidden></div>
           </div>
           <div id="leyenda-grafo" class="leyenda"></div>
@@ -358,7 +380,7 @@
           </p>
           <div id="aviso-grafo" class="nota" hidden></div>
 
-          <aside id="cajon" class="cajon" hidden>
+          <aside id="cajon" class="cajon" aria-labelledby="cajon-titulo" tabindex="-1" hidden>
             <div class="cajon-cabecera">
               <div>
                 <h3 id="cajon-titulo"></h3>
@@ -482,6 +504,8 @@
       </main>
     </div>
   </div>
+
+  <p id="anuncio" class="solo-lectores" role="status" aria-live="polite"></p>
 
   <script src="app.js" type="module"></script>
 </body>
