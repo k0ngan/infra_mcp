@@ -610,8 +610,16 @@ const servidor = http.createServer(async (req, res) => {
      * esa ruta son 68 MB para dejar pasar los 50 MB que acepta el MCP. Es el
      * unico sitio donde se sube, y queda acotado a esa ruta justamente para que
      * el resto de la tabla siga barata de proteger.
+     *
+     * Y se exige sesion para conceder ese tope, no despues. El cuerpo se lee
+     * ANTES de que la tabla de rutas compruebe quien llama, asi que sin esto
+     * cualquiera que alcance el puerto podia hacer que el servidor retuviera 68
+     * MB en memoria y recien entonces recibir un 401. Repetido unas pocas veces,
+     * eso lo tumba. Escucha en 127.0.0.1, asi que hoy el riesgo es bajo; el dia
+     * que alguien cambie PLATAFORMA_HOST deja de serlo.
      */
-    const tope = clave === "POST /api/entrega/archivo" ? 68_000_000 : 1_000_000;
+    const subeArchivo = clave === "POST /api/entrega/archivo" && Boolean(leerSesion(token));
+    const tope = subeArchivo ? 68_000_000 : 1_000_000;
     const cuerpo = req.method === "POST" ? await leerCuerpo(req, tope) : {};
 
     if (PUBLICAS[clave]) {

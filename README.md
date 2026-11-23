@@ -444,7 +444,7 @@ siguen siendo legibles.
 npm test
 ```
 
-133 pruebas con el runner de Node, sin red, sin Ollama y sin tocar el vault. Lo que cubren es lo
+135 pruebas con el runner de Node, sin red, sin Ollama y sin tocar el vault. Lo que cubren es lo
 que rompe un PDF en silencio: el escapado de LaTeX (una sola pasada, y ningún codepoint raro
 sobrevive), que toda sección salga con al menos una cita y que todas vengan del material, que una
 cita inventada se descarte, y que `canvas_submit_assignment` siga prohibida. La única que necesita

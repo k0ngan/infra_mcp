@@ -45,7 +45,6 @@ fuente si se extrajo. Mentir ahi seria peor que no extraer.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import unicodedata
 from pathlib import Path

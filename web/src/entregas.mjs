@@ -87,12 +87,10 @@ export function guardarArchivo(usuario, { nombre, contenido_base64 }) {
     );
   }
 
-  let datos;
-  try {
-    datos = Buffer.from(String(contenido_base64 || ""), "base64");
-  } catch {
-    throw fallo("El contenido del archivo no se pudo leer.");
-  }
+  // `Buffer.from` con base64 NO lanza con una entrada mala: descarta lo que no
+  // reconoce y devuelve lo que pudo. Asi que el largo es la unica comprobacion
+  // que sirve, y un try/catch alrededor seria codigo que no se ejecuta jamas.
+  const datos = Buffer.from(String(contenido_base64 || ""), "base64");
   if (!datos.length) throw fallo("El archivo llego vacio.");
 
   const carpeta = carpetaDeEntregas(usuario.id);

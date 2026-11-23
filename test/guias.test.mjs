@@ -315,6 +315,35 @@ test("el modelo caido se intenta una vez y no una por seccion", async () => {
   assert.ok(avisos.some(a => a.includes("El resto de las secciones")));
 });
 
+test("una seccion que sale mal no arrastra a las que vienen detras", async () => {
+  /*
+   * El corte es solo para cuando el modelo NO esta (503). Una respuesta vacia
+   * es un 502 y es de esa seccion: la siguiente puede salir perfecta. La
+   * primera version cortaba con cualquier error y un tropiezo en la seccion 2
+   * dejaba las secciones 3 a 6 como extractos crudos.
+   */
+  let llamadas = 0;
+  const avisos = [];
+
+  const redactadas = await redactarSecciones(SECCIONES, {
+    tema: "automatas",
+    avisos,
+    redactor: async () => {
+      llamadas += 1;
+      if (llamadas === 1) throw Object.assign(new Error("El modelo respondio vacio."), { estado: 502 });
+      return "Los lenguajes regulares se cierran bajo union, segun el apunte del ramo.";
+    },
+  });
+
+  // Una llamada por seccion: al lanzar excepcion se salta el reintento, que es
+  // para cuando el modelo contesta algo que al limpiarlo queda vacio.
+  assert.equal(llamadas, 3);
+  assert.equal(redactadas[0].origen, "extracto", "la que fallo cae al extracto");
+  assert.equal(redactadas[1].origen, "modelo", "pero las siguientes se intentan igual");
+  assert.equal(redactadas[2].origen, "modelo");
+  assert.ok(!avisos.some(a => a.includes("El resto de las secciones")));
+});
+
 test("lo que ya se redacto se conserva cuando el modelo se cae a mitad", async () => {
   let llamadas = 0;
   const avisos = [];

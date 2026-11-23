@@ -395,22 +395,54 @@ test("el indice de un libro no desplaza al contenido", () => {
   assert.doesNotMatch(bloques[0], /\. \. \. \./);
 });
 
+/*
+ * El indice de prueba tiene la forma que deja el extractor de verdad: el titulo
+ * con puntos conductores en una linea y el numero de pagina en la siguiente. Y
+ * tiene que pasar de cinco lineas, porque debajo de eso `esIndice` ni mira el
+ * contenido. Las primeras versiones de estas dos pruebas usaban tres lineas y
+ * por eso pasaban sin llegar nunca a la regla que decian probar.
+ */
+const INDICE_LARGO = [
+  "Capitulo 1 . . . . . . . . . .",
+  "3",
+  "Capitulo 2 . . . . . . . . . .",
+  "9",
+  "Capitulo 3 . . . . . . . . . .",
+  "17",
+  "Capitulo 4 . . . . . . . . . .",
+  "25",
+].join("\n");
+
 test("si todo lo que vino es indice, se usa igual", () => {
   // Desaparecer la fuente seria peor: nadie sabria por que falta.
-  const indice = [
-    "Capitulo 1 . . . . . . . . . . 3",
-    "Capitulo 2 . . . . . . . . . . 9",
-    "Capitulo 3 . . . . . . . . . . 17",
-  ].join("\n");
+  assert.ok(agente.esIndice(INDICE_LARGO), "el caso tiene que entrar al respaldo de verdad");
+
   const bloques = agente.armarBloques([
-    { cita: "archivo:1", tipo: "archivo", titulo: "Solo indice", pasajes: [indice] },
+    { cita: "archivo:1", tipo: "archivo", titulo: "Solo indice", pasajes: [INDICE_LARGO] },
   ]);
   assert.equal(bloques.length, 1);
   assert.ok(bloques[0].includes("Capitulo 1"));
 });
 
-test("esIndice no confunde una frase con puntos suspensivos", () => {
-  assert.ok(!agente.esIndice("Y entonces... bueno... eso fue todo.\nSegunda linea.\nTercera."));
+test("esIndice no confunde prosa con un indice", () => {
+  // Puntos suspensivos, numeracion de ejercicios y formulas: nada de eso es un
+  // indice, y todo eso aparece en los apuntes de un ramo de matematicas.
+  const prosa = [
+    "Y entonces... bueno... eso fue todo lo que alcanzamos a ver en clases.",
+    "Ejercicio 2.2.8. Sea A un AFD y a un simbolo de entrada particular de A.",
+    "Demuestre por induccion sobre la longitud de la entrada que para toda w",
+    "se cumple que delta(q, w) = q para todos los estados q del automata.",
+    "El resultado vale tambien para los automatas no deterministas.",
+    "Queda propuesto como ejercicio para la prueba del viernes.",
+  ].join("\n");
+  assert.equal(prosa.split("\n").length, 6, "tiene que superar el minimo de lineas");
+  assert.ok(!agente.esIndice(prosa));
+});
+
+test("un pasaje corto nunca se descarta como indice", () => {
+  // Debajo de cinco lineas no hay con que decidir, y descartar material de
+  // verdad es peor que dejar pasar un indice de tres lineas.
+  assert.ok(!agente.esIndice("Capitulo 1 . . . . 3\nCapitulo 2 . . . . 9"));
 });
 
 test("una fuente sin texto no genera bloque", () => {

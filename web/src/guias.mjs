@@ -406,12 +406,26 @@ export async function redactarSecciones(esqueleto, {
         } catch (error) {
           // Ollama caido a mitad no bota el trabajo: lo que ya se redacto se
           // conserva y el resto sale como extracto.
-          modeloCaido = true;
           avisos.push(`El modelo dejo de responder: ${error.message}`);
-          if (indice < esqueleto.length - 1) {
-            avisos.push("El resto de las secciones quedo como extracto literal.");
-          }
           intento = 2;
+
+          /*
+           * El corte distingue "el modelo no esta" de "esta seccion salio mal",
+           * y la diferencia importa.
+           *
+           * 503 es Ollama apagado o sin el modelo: insistir cinco veces mas solo
+           * gasta cinco timeouts. Cualquier otro error —una respuesta vacia, por
+           * ejemplo— es de ESTA seccion y la siguiente puede salir perfecta. La
+           * primera version cortaba con cualquier error, y entonces un tropiezo
+           * en la seccion 2 convertia las secciones 3 a 6 en extractos crudos
+           * sin que nada lo explicara.
+           */
+          if (error.estado === 503) {
+            modeloCaido = true;
+            if (indice < esqueleto.length - 1) {
+              avisos.push("El resto de las secciones quedo como extracto literal.");
+            }
+          }
         }
       }
     }

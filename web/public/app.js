@@ -1732,30 +1732,47 @@ const mismaEntrega = (a, b) =>
   a.archivo === b.archivo &&
   a.comentario === b.comentario;
 
+/*
+ * Los nombres de campo salen del MCP, no de lo que suene razonable en espanol.
+ *
+ * La primera version de esto adivinaba —`titulo`, `ramo`, `entregado`,
+ * `puntos`— y no coincidia ni uno: el MCP devuelve `name`, `course`, `due_at`,
+ * `points_possible` y `submitted_at` (`assignmentSummary` en su tools.mjs).
+ * Cada tarjeta salia diciendo "Tarea undefined". Con la cookie vencida no se
+ * podia ver, y por eso conviene que quede escrito de donde salen.
+ */
 function filaDePendiente(tarea) {
   const bloque = document.createElement("article");
   bloque.className = "card";
 
   const titulo = document.createElement("h3");
-  titulo.textContent = tarea.titulo || tarea.nombre || `Tarea ${tarea.assignment_id}`;
+  titulo.textContent = tarea.name || `Tarea ${tarea.id}`;
   bloque.append(titulo);
 
   const detalle = document.createElement("p");
   detalle.className = "ayuda";
   const partes = [];
-  if (tarea.ramo || tarea.curso) partes.push(tarea.ramo || tarea.curso);
-  if (tarea.vence || tarea.due_at) partes.push(`vence ${tarea.vence || tarea.due_at}`);
-  if (tarea.entregado === true) partes.push("ya entregada");
-  if (tarea.puntos != null) partes.push(`${tarea.puntos} puntos`);
-  detalle.textContent = partes.join(" · ") || "sin fecha declarada";
+  if (tarea.course) partes.push(tarea.course);
+  partes.push(tarea.due_at ? `vence ${fechaLegible(tarea.due_at)}` : "sin fecha declarada");
+  if (tarea.submitted_at) partes.push(`ya entregada el ${fechaLegible(tarea.submitted_at)}`);
+  if (tarea.points_possible != null) partes.push(`${tarea.points_possible} puntos`);
+  detalle.textContent = partes.join(" · ");
   bloque.append(detalle);
 
   return bloque;
 }
 
-/** Las tareas del MCP vienen con nombres distintos segun la version; se acepta cualquiera. */
-const listaDeTareas = datos =>
-  datos.tareas || datos.pendientes || datos.assignments || datos.items || [];
+/** Canvas manda la fecha en ISO; en pantalla eso no lo lee nadie. */
+function fechaLegible(iso) {
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return iso;
+  return fecha.toLocaleString("es-CL", {
+    day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+/** La clave es `tasks`, y es la que devuelve `canvas_list_active_tasks`. */
+const listaDeTareas = datos => datos.tasks || [];
 
 async function verPendientes() {
   const listado = $("#listado-pendientes");
@@ -1786,12 +1803,14 @@ async function verPendientes() {
     const selector = $("#entrega-tarea");
     selector.replaceChildren();
     for (const tarea of tareas) {
-      const id = tarea.assignment_id ?? tarea.id;
-      const ramo = tarea.course_id ?? tarea.curso_id;
-      if (!id || !ramo) continue;
+      if (!tarea.id || !tarea.course_id) continue;
       const opcion = document.createElement("option");
-      opcion.value = `${ramo}:${id}`;
-      opcion.textContent = tarea.titulo || tarea.nombre || `Tarea ${id}`;
+      opcion.value = `${tarea.course_id}:${tarea.id}`;
+      // El ramo va en la etiqueta: hay tareas que se llaman "Tarea 1" en tres
+      // ramos distintos, y el selector no muestra de cual es cada una.
+      opcion.textContent = tarea.course
+        ? `${tarea.name || `Tarea ${tarea.id}`} — ${tarea.course}`
+        : tarea.name || `Tarea ${tarea.id}`;
       selector.append(opcion);
     }
     $("#card-entrega").hidden = selector.options.length === 0;
