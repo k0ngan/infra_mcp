@@ -224,7 +224,25 @@ export function escaparLatex(texto) {
       salida += equivalente;
       continue;
     }
-    if (caracter.codePointAt(0) <= TOPE_SEGURO) {
+    const punto = caracter.codePointAt(0);
+
+    /*
+     * Los caracteres de control se van, y esto costo un PDF.
+     *
+     * Estan por DEBAJO del tope seguro, asi que pasaban enteros por la rama de
+     * abajo. Mientras las fuentes eran notas de Canvas no aparecia ninguno;
+     * desde que `scripts/extraer-texto.py` saca el texto de los PDF, vienen
+     * dentro: un 0x03 en medio de un ejercicio del libro de automatas mato la
+     * compilacion con "Fatal error occurred, no output PDF file produced",
+     * y el log solo decia `^^C`.
+     *
+     * Se conservan el salto de linea y el tabulador, que si significan algo.
+     */
+    const esControl = (punto < 0x20 && punto !== 0x0a && punto !== 0x09) ||
+      (punto >= 0x7f && punto <= 0x9f);
+    if (esControl) continue;
+
+    if (punto <= TOPE_SEGURO) {
       salida += caracter;
       continue;
     }

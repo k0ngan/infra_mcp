@@ -371,6 +371,48 @@ test("una fuente larga no se come el presupuesto entero", () => {
   assert.ok(bloques.every(b => b.length < 700));
 });
 
+test("el indice de un libro no desplaza al contenido", () => {
+  /*
+   * Desde que los adjuntos se extraen, una fuente puede ser un libro entero y
+   * su primer pasaje es el indice. Como el tope recorta por el principio, ese
+   * indice se comia el cupo y la seccion salia enumerando titulos.
+   */
+  const indice = [
+    "2.2.4.",
+    "Extension a cadenas de la funcion de transicion . . . . . . . . . . . . . . 41",
+    "2.2.5.",
+    "El lenguaje de un AFD . . . . . . . . . . . . . . . . . . 43",
+    "2.2.6.",
+    "Ejercicios de la Seccion 2.2 . . . . . . . . . . . . . . . 45",
+  ].join("\n");
+  const materia = "Un AFD acepta una cadena w si delta(q0, w) pertenece a F, segun el apunte.";
+
+  const bloques = agente.armarBloques([
+    { cita: "archivo:1", tipo: "archivo", titulo: "Libro", pasajes: [indice, materia] },
+  ]);
+
+  assert.ok(bloques[0].includes("Un AFD acepta"));
+  assert.doesNotMatch(bloques[0], /\. \. \. \./);
+});
+
+test("si todo lo que vino es indice, se usa igual", () => {
+  // Desaparecer la fuente seria peor: nadie sabria por que falta.
+  const indice = [
+    "Capitulo 1 . . . . . . . . . . 3",
+    "Capitulo 2 . . . . . . . . . . 9",
+    "Capitulo 3 . . . . . . . . . . 17",
+  ].join("\n");
+  const bloques = agente.armarBloques([
+    { cita: "archivo:1", tipo: "archivo", titulo: "Solo indice", pasajes: [indice] },
+  ]);
+  assert.equal(bloques.length, 1);
+  assert.ok(bloques[0].includes("Capitulo 1"));
+});
+
+test("esIndice no confunde una frase con puntos suspensivos", () => {
+  assert.ok(!agente.esIndice("Y entonces... bueno... eso fue todo.\nSegunda linea.\nTercera."));
+});
+
 test("una fuente sin texto no genera bloque", () => {
   const bloques = agente.armarBloques([
     { cita: "archivo:1", tipo: "archivo", titulo: "vacio", pasajes: [] },

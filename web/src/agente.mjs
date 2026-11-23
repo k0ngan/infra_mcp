@@ -285,6 +285,41 @@ function fallo(mensaje, estado = 502) {
  */
 const PESO_POR_TIPO = { anuncio: 0, tarea: 1, pagina: 2, modulo: 3, archivo: 4, curso: 5 };
 
+/*
+ * El indice de un libro no es materia.
+ *
+ * Esto no hacia falta mientras los adjuntos no se extraian: las fuentes eran
+ * notas cortas. Desde que `scripts/extraer-texto.py` convierte los PDF en texto,
+ * una fuente puede ser un libro de trescientas paginas, y su primer pasaje es
+ * casi siempre el indice: lineas de puntos conductores terminadas en un numero
+ * de pagina. Como el tope por fuente recorta POR EL PRINCIPIO, ese indice
+ * desplazaba al contenido de verdad y la seccion salia enumerando titulos en vez
+ * de explicarlos.
+ *
+ * Se descarta por la forma, no por la posicion: un indice puede estar en
+ * cualquier parte de un PDF mal armado.
+ *
+ * El umbral no se eligio a ojo, se midio sobre el indice del libro de automatas
+ * del ramo de Grafos. Al principio la regla miraba solo los puntos conductores y
+ * no servia: el indice tenia 30% de lineas con puntos, justo por debajo de
+ * cualquier umbral razonable. La senal fuerte era otra, la de al lado: el 61% de
+ * sus lineas son SOLO un numero, porque el extractor deja la numeracion de
+ * seccion y el numero de pagina cada una en su linea. Sumando las dos, ese
+ * indice da 90% y los dos pasajes de materia que venian detras dan 5% y 0%. Con
+ * una separacion asi, 50% queda lejos de los dos lados.
+ */
+const PUNTOS_CONDUCTORES = /\.\s?\.\s?\.\s?\./;
+const SOLO_UN_NUMERO = /^\s*\d+(?:\.\d+)*\.?\s*$/;
+
+export function esIndice(pasaje) {
+  const lineas = String(pasaje || "").split("\n").filter(l => l.trim());
+  if (lineas.length < 5) return false;
+  const sospechosas = lineas.filter(
+    l => PUNTOS_CONDUCTORES.test(l) || SOLO_UN_NUMERO.test(l),
+  ).length;
+  return sospechosas / lineas.length >= 0.5;
+}
+
 /**
  * El mismo armado, con el presupuesto como argumento.
  *
@@ -302,7 +337,11 @@ export function armarBloques(fuentes, { presupuesto = PERFIL.presupuesto, tope =
   let usados = 0;
 
   for (const fuente of ordenadas) {
-    let texto = (fuente.pasajes || []).join("\n").trim();
+    const pasajes = fuente.pasajes || [];
+    // Si TODO lo que vino es indice, se deja igual: un indice es mejor que una
+    // fuente que desaparece sin que nadie sepa por que.
+    const utiles = pasajes.filter(p => !esIndice(p));
+    let texto = (utiles.length ? utiles : pasajes).join("\n").trim();
     if (!texto) continue;
     if (texto.length > tope) texto = `${texto.slice(0, tope)}…`;
 

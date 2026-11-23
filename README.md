@@ -339,19 +339,58 @@ Vale la pena anotarlos porque ninguno se habría visto mirando una guía por enc
 | Ambiente en contenedor | listo |
 | Encuesta y cuadro de adopción | listo |
 | Tareas pendientes y entrega en dos pasos | listo |
+| Extracción de texto de los adjuntos | listo |
 | Indexación distribuida, Parquet, registro verificable | fase 3 |
 
 La pantalla de material se lee del disco, así que **sigue sirviendo aunque la sesión de Canvas
 haya vencido**: muestra lo sincronizado y un aviso explicando qué es lo que no se pudo
 actualizar, en vez de una pantalla en blanco.
 
-### Lo que falta y por qué importa
+### Extracción de texto
 
-Hoy **ningún adjunto aporta texto**: el vault no tiene carpetas `Fuentes extraidas/`, así que los
-PDF y las presentaciones existen pero no se pueden leer, y las guías salen solo de notas Markdown
-(anuncios, tareas, módulos y páginas). La plataforma lo informa en vez de disimularlo —en la
-pantalla de Archivos, en el aviso de la guía y en el pie del PDF— pero sigue siendo el límite más
-grande que tiene ahora mismo.
+Hasta hace poco **ningún adjunto aportaba texto**: los PDF y las presentaciones estaban en el
+disco pero no se podían leer, y una guía de Grafos se armaba con 14 de 155 fuentes. Las otras 141
+eran el límite más grande de la plataforma.
+
+`scripts/extraer-texto.py` lo resuelve. Escribe exactamente lo que el MCP busca —
+`<ramo>/Fuentes extraidas/<file_id>.txt`, que es el contrato que está en su `src/study.mjs` — para
+cada archivo de `<ramo>/Descargas/`.
+
+```bash
+pip install PyMuPDF python-docx python-pptx
+python scripts/extraer-texto.py --dry-run     # dice qué haría
+python scripts/extraer-texto.py
+```
+
+Sobre este vault: **415 adjuntos extraídos, 0 fallos**, 9 sin capa de texto y 50 en formatos que no
+son texto (17 vídeos, 19 planillas, 10 imágenes). Y el cambio que importa no es el número: una guía
+sobre autómatas pasó de tener secciones tituladas «Vista general del ramo» y «CALENDARIO
+EVALUACIONES» a tenerlas tituladas «Teoría de Autómatas. Libro» y «Apuntes Leng Gramáticas
+Autómatas», con la definición de máquina de Moore y los ejercicios del capítulo adentro.
+
+Es un paso **opcional y aparte** a propósito. La plataforma declara una sola dependencia de npm y
+ningún paso de compilación, y esa promesa es media nota del ramo; extraer PDF, DOCX y PPTX necesita
+librerías de Python que la romperían para todo el mundo aunque solo las use quien tenga adjuntos.
+La plataforma levanta y arma guías sin esto: lo que cambia al correrlo es cuánto material tienen
+esas guías.
+
+**No inventa texto.** Un PDF escaneado no se puede leer sin OCR, y el script no hace OCR: lo deja
+anotado y no escribe un `.txt` vacío que haría creer a la plataforma que esa fuente ya se extrajo.
+
+#### Dos cosas que solo aparecieron al extraer
+
+Las dos estaban latentes y ninguna se habría visto sin material de verdad:
+
+- **El índice de un libro no es materia.** Mientras las fuentes eran notas cortas daba igual; con
+  un libro de trescientas páginas, su primer pasaje es el índice, y como el tope por fuente recorta
+  por el principio, la sección salía enumerando títulos en vez de explicarlos. El umbral para
+  detectarlo se midió, no se eligió a ojo: ese índice tiene 30% de líneas con puntos conductores
+  —por debajo de cualquier umbral razonable— pero 61% de líneas que son **solo un número**. Sumadas
+  dan 90%, contra 5% y 0% de los dos pasajes de materia que venían detrás.
+- **Un carácter de control tumbaba el PDF entero.** Están por debajo del tope seguro de
+  `escaparLatex`, así que pasaban enteros; un `0x03` en medio de un ejercicio mataba la compilación
+  con «Fatal error occurred, no output PDF file produced» y el log solo decía `^^C`. Se filtran en
+  los dos sitios: en el extractor y en el generador de LaTeX, que es el último portón antes del PDF.
 
 Por eso la extracción de texto es la primera pieza de la fase 3, y no un ítem del temario: es la
 que convierte cientos de archivos descargados en material citable.
@@ -405,7 +444,7 @@ siguen siendo legibles.
 npm test
 ```
 
-128 pruebas con el runner de Node, sin red, sin Ollama y sin tocar el vault. Lo que cubren es lo
+133 pruebas con el runner de Node, sin red, sin Ollama y sin tocar el vault. Lo que cubren es lo
 que rompe un PDF en silencio: el escapado de LaTeX (una sola pasada, y ningún codepoint raro
 sobrevive), que toda sección salga con al menos una cita y que todas vengan del material, que una
 cita inventada se descarte, y que `canvas_submit_assignment` siga prohibida. La única que necesita
@@ -485,6 +524,8 @@ web/src/latex.mjs           escapado, plantilla y compilacion a PDF
 web/src/metricas.mjs        adopcion: quien termino, cuanto usa, si vuelve, si respondio
 web/src/entregas.mjs        entregar en Canvas, en dos pasos y acotado a tu carpeta
 web/public/                 la pagina: HTML, CSS y JS a mano
+scripts/extraer-texto.py    convierte los adjuntos en texto citable (opcional, Python)
+scripts/banco-de-modelos.mjs  mide que modelo sirve para esta tarea (npm run banco)
 test/                       node --test, sin red y sin vault
 Dockerfile                  Node fijado + la instalacion minima de LaTeX
 docker-compose.yml          el servicio web; Ollama se queda en el anfitrion
