@@ -80,11 +80,29 @@ export function lanzar(usuarioId, tipo, tarea) {
   return id;
 }
 
-/** Devuelve el trabajo si pertenece a quien pregunta. Si no, no existe. */
+/**
+ * Devuelve el trabajo si pertenece a quien pregunta. Si no, no existe.
+ *
+ * El mensaje dice que hacer, y eso costo aprenderlo: al recrear el contenedor a
+ * mitad de una sincronizacion, la pantalla quedo diciendo "No existe ese
+ * trabajo", que es exacto y no sirve de nada. La sesion sobrevive porque vive en
+ * un volumen, pero los trabajos son de memoria y se van con el proceso, asi que
+ * la pagina seguia preguntando por uno que ya no estaba.
+ *
+ * No se distingue "id equivocado" de "el servidor se reinicio" porque desde aqui
+ * no se puede, y porque para quien esta mirando la pantalla el remedio es el
+ * mismo: volver a lanzarlo.
+ */
 export function consultar(usuarioId, id) {
   const trabajo = trabajos.get(String(id || ""));
   if (!trabajo || trabajo.usuarioId !== usuarioId) {
-    throw Object.assign(new Error("No existe ese trabajo."), { estado: 404 });
+    throw Object.assign(
+      new Error(
+        "Ese trabajo ya no existe. Si el servidor se reinicio a mitad, los trabajos en curso se " +
+        "pierden y hay que volver a lanzarlo; lo que ya se habia escrito en el vault esta a salvo.",
+      ),
+      { estado: 404 },
+    );
   }
   const { usuarioId: _, ...publico } = trabajo;
   return publico;
