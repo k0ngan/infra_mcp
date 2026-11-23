@@ -45,11 +45,35 @@ fuente si se extrajo. Mentir ahi seria peor que no extraer.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import unicodedata
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
+
+# Windows corta las rutas en 260 caracteres (MAX_PATH), y un vault de Canvas las
+# pasa sin esfuerzo: el nombre del ramo ya trae su codigo, su seccion, su
+# semestre y su nombre completo.
+#
+# Lo peor no es el limite, es como falla: `Path.is_file()` devuelve False en vez
+# de lanzar. O sea que el archivo esta ahi, pesa su megabyte y medio, y el script
+# lo salta sin decir nada. Paso exactamente con el programa de Infraestructura,
+# cuya ruta mide 263 caracteres.
+#
+# El prefijo `\\?\` le dice a Windows que use la API larga y no el limite viejo.
+# Solo funciona con rutas absolutas y con separadores de Windows.
+PREFIJO_LARGO = "\\\\?\\"
+
+
+def ruta_larga(ruta: Path) -> Path:
+    """La misma ruta, en la forma que Windows puede abrir aunque sea larga."""
+    if os.name != "nt":
+        return ruta
+    absoluta = os.path.abspath(str(ruta))
+    if absoluta.startswith(PREFIJO_LARGO):
+        return Path(absoluta)
+    return Path(PREFIJO_LARGO + absoluta)
 
 # El MCP usa este nombre exacto de carpeta. No es decorativo: si cambia, la
 # plataforma deja de encontrar el texto y vuelve a decir «sin texto extraido».
@@ -196,7 +220,8 @@ def ramos_de(vault: Path):
 def procesar(ramo: Path, *, rehacer: bool, dry_run: bool) -> dict:
     descargas = ramo / CARPETA_DESCARGAS
     destino = ramo / CARPETA_EXTRAIDAS
-    cuenta = {"extraidos": 0, "ya_estaban": 0, "ocr_pendiente": 0, "sin_soporte": 0, "fallaron": 0}
+    cuenta = {"extraidos": 0, "ya_estaban": 0, "ocr_pendiente": 0, "sin_soporte": 0,
+              "fallaron": 0, "saltados": 0}
     pendientes_de_ocr = []
 
     for archivo in sorted(descargas.iterdir()):
@@ -205,6 +230,10 @@ def procesar(ramo: Path, *, rehacer: bool, dry_run: bool) -> dict:
 
         file_id = id_del_archivo(archivo.name)
         if file_id is None:
+            # Un archivo sin el prefijo del file_id no lo puso el sincronizador.
+            # Se cuenta: un `continue` callado fue lo que escondio el programa de
+            # Infraestructura durante toda una tarde.
+            cuenta["saltados"] += 1
             continue
 
         extractor = EXTRACTORES.get(archivo.suffix.lower())
@@ -251,14 +280,15 @@ def main() -> int:
 
     dependencias()
 
-    base = (RAIZ / args.vaults).resolve()
+    base = ruta_larga(RAIZ / args.vaults)
     if not base.is_dir():
         print(f"No existe la carpeta de vaults: {base}", file=sys.stderr)
         return 1
 
     vaults = [base / args.usuario] if args.usuario else [d for d in sorted(base.iterdir()) if d.is_dir()]
 
-    total = {"extraidos": 0, "ya_estaban": 0, "ocr_pendiente": 0, "sin_soporte": 0, "fallaron": 0}
+    total = {"extraidos": 0, "ya_estaban": 0, "ocr_pendiente": 0, "sin_soporte": 0,
+             "fallaron": 0, "saltados": 0}
     ocr = []
 
     for vault in vaults:
@@ -290,6 +320,8 @@ def main() -> int:
     print(f"  sin capa de texto  {total['ocr_pendiente']}  (hacen falta OCR; no se escribio nada)")
     print(f"  formato no leible  {total['sin_soporte']}")
     print(f"  fallaron           {total['fallaron']}")
+    if total["saltados"]:
+        print(f"  saltados           {total['saltados']}  (sin el prefijo del file_id en el nombre)")
 
     if ocr:
         # Se nombran en vez de contarlos y ya: para saber si lo que falta es un
