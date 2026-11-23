@@ -1691,6 +1691,309 @@ async function cargarAdopcion() {
   }
 }
 
+/* ───────── Tareas pendientes y entrega ───────── */
+
+/*
+ * La entrega es lo unico irreversible de la plataforma, y el riesgo de verdad no
+ * es tecnico: es que alguien revise la tarea 3, cambie el selector a la tarea 4
+ * y confirme creyendo que confirma lo que vio.
+ *
+ * Por eso lo revisado se guarda entero y se compara antes de confirmar. Cualquier
+ * cambio en la tarea, el archivo o el comentario invalida la confirmacion y
+ * obliga a revisar de nuevo. Es la clase de error que no se puede reparar
+ * despues, asi que se previene antes.
+ */
+let entregaRevisada = null;
+
+function peticionDeEntrega() {
+  const opcion = $("#entrega-tarea").selectedOptions[0];
+  if (!opcion?.value) return null;
+  const [course_id, assignment_id] = opcion.value.split(":").map(Number);
+  const archivo = $("#listado-subidos").querySelector("input[name=archivo]:checked")?.value || "";
+  return {
+    course_id,
+    assignment_id,
+    archivo,
+    comentario: $("#entrega-comentario").value.trim(),
+    tarea: opcion.textContent,
+  };
+}
+
+function olvidarRevision() {
+  entregaRevisada = null;
+  ocultar($("#plan-entrega"));
+  $("#fila-confirmar").hidden = true;
+}
+
+const mismaEntrega = (a, b) =>
+  a && b &&
+  a.course_id === b.course_id &&
+  a.assignment_id === b.assignment_id &&
+  a.archivo === b.archivo &&
+  a.comentario === b.comentario;
+
+function filaDePendiente(tarea) {
+  const bloque = document.createElement("article");
+  bloque.className = "card";
+
+  const titulo = document.createElement("h3");
+  titulo.textContent = tarea.titulo || tarea.nombre || `Tarea ${tarea.assignment_id}`;
+  bloque.append(titulo);
+
+  const detalle = document.createElement("p");
+  detalle.className = "ayuda";
+  const partes = [];
+  if (tarea.ramo || tarea.curso) partes.push(tarea.ramo || tarea.curso);
+  if (tarea.vence || tarea.due_at) partes.push(`vence ${tarea.vence || tarea.due_at}`);
+  if (tarea.entregado === true) partes.push("ya entregada");
+  if (tarea.puntos != null) partes.push(`${tarea.puntos} puntos`);
+  detalle.textContent = partes.join(" · ") || "sin fecha declarada";
+  bloque.append(detalle);
+
+  return bloque;
+}
+
+/** Las tareas del MCP vienen con nombres distintos segun la version; se acepta cualquiera. */
+const listaDeTareas = datos =>
+  datos.tareas || datos.pendientes || datos.assignments || datos.items || [];
+
+async function verPendientes() {
+  const listado = $("#listado-pendientes");
+  const estadoTexto = $("#estado-pendientes");
+  ocultar($("#aviso-tareas"));
+  listado.textContent = "Preguntandole a Canvas...";
+  estadoTexto.textContent = "";
+
+  try {
+    const datos = await pedir("/api/pendientes");
+    const tareas = listaDeTareas(datos);
+
+    pintarSubidos(datos.subidos || []);
+
+    if (!tareas.length) {
+      listado.replaceChildren();
+      const vacio = document.createElement("p");
+      vacio.className = "vacio";
+      vacio.textContent = "Canvas no reporta tareas pendientes.";
+      listado.append(vacio);
+      $("#card-entrega").hidden = true;
+      return;
+    }
+
+    listado.replaceChildren(...tareas.map(filaDePendiente));
+    estadoTexto.textContent = `${tareas.length} pendiente${tareas.length === 1 ? "" : "s"}`;
+
+    const selector = $("#entrega-tarea");
+    selector.replaceChildren();
+    for (const tarea of tareas) {
+      const id = tarea.assignment_id ?? tarea.id;
+      const ramo = tarea.course_id ?? tarea.curso_id;
+      if (!id || !ramo) continue;
+      const opcion = document.createElement("option");
+      opcion.value = `${ramo}:${id}`;
+      opcion.textContent = tarea.titulo || tarea.nombre || `Tarea ${id}`;
+      selector.append(opcion);
+    }
+    $("#card-entrega").hidden = selector.options.length === 0;
+    olvidarRevision();
+  } catch (error) {
+    listado.replaceChildren();
+    $("#card-entrega").hidden = true;
+    // La cookie vencida es el caso comun y tiene remedio propio: decirlo asi
+    // evita que alguien crea que no tiene tareas cuando lo que falta es entrar.
+    if (error.estado === 401) {
+      nota(
+        $("#aviso-tareas"),
+        "Tu sesion de Canvas vencio.",
+        " Renuevala en «Cookie de Canvas» y vuelve a preguntar. Esto se lee de Canvas, no del vault.",
+        "mala",
+      );
+      return;
+    }
+    avisoDeError($("#aviso-tareas"), "No se pudo leer tus pendientes", error);
+  }
+}
+
+function pintarSubidos(subidos) {
+  const caja = $("#listado-subidos");
+  caja.replaceChildren();
+
+  if (!subidos.length) {
+    const vacio = document.createElement("p");
+    vacio.className = "ayuda";
+    vacio.textContent = "Todavia no subiste ningun archivo.";
+    caja.append(vacio);
+    return;
+  }
+
+  for (const [indice, archivo] of subidos.entries()) {
+    /*
+     * El boton va FUERA de la etiqueta, no dentro.
+     *
+     * Un boton anidado en un <label> hereda su comportamiento: pulsar "Quitar"
+     * marcaba tambien el radio, y un lector de pantalla lee el texto del boton
+     * como parte del nombre de la casilla.
+     */
+    const grupo = document.createElement("div");
+    grupo.className = "fila";
+
+    const etiqueta = document.createElement("label");
+    etiqueta.className = "campo-inline";
+
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "archivo";
+    radio.value = archivo.archivo;
+    if (indice === 0) radio.checked = true;
+    radio.addEventListener("change", olvidarRevision);
+
+    const texto = document.createElement("span");
+    texto.textContent = `${archivo.archivo} (${Math.round(archivo.bytes / 1024)} KB)`;
+
+    const quitar = document.createElement("button");
+    quitar.type = "button";
+    quitar.className = "boton suave";
+    quitar.textContent = "Quitar";
+    // Sin esto, con lector de pantalla los botones de la lista suenan todos
+    // igual: "Quitar", "Quitar", "Quitar".
+    quitar.setAttribute("aria-label", `Quitar ${archivo.archivo}`);
+    quitar.addEventListener("click", async () => {
+      try {
+        await enviar("/api/entrega/olvidar", { archivo: archivo.archivo });
+        const { subidos: quedan } = await pedir("/api/entrega/archivos");
+        pintarSubidos(quedan);
+        olvidarRevision();
+      } catch (error) {
+        avisoDeError($("#aviso-tareas"), "No se pudo quitar el archivo", error);
+      }
+    });
+
+    etiqueta.append(radio, texto);
+    grupo.append(etiqueta, quitar);
+    caja.append(grupo);
+  }
+}
+
+/** El archivo va en base64 dentro del JSON: ver el por que en entregas.mjs. */
+const comoBase64 = archivo => new Promise((listo, falla) => {
+  const lector = new FileReader();
+  lector.onload = () => listo(String(lector.result).split(",")[1] || "");
+  lector.onerror = () => falla(new Error("No se pudo leer el archivo."));
+  lector.readAsDataURL(archivo);
+});
+
+async function subirArchivo() {
+  const entrada = $("#entrega-archivo");
+  const archivo = entrada.files?.[0];
+  const boton = $("#subir-archivo");
+
+  if (!archivo) {
+    nota($("#aviso-tareas"), "Elige un archivo primero.", "", "mala");
+    return;
+  }
+
+  boton.disabled = true;
+  ocultar($("#aviso-tareas"));
+  try {
+    const contenido_base64 = await comoBase64(archivo);
+    await enviar("/api/entrega/archivo", { nombre: archivo.name, contenido_base64 });
+    const { subidos } = await pedir("/api/entrega/archivos");
+    pintarSubidos(subidos);
+    olvidarRevision();
+    entrada.value = "";
+    nota($("#aviso-tareas"), "Archivo subido.", " Todavia no se entrego nada: revisa y confirma abajo.");
+  } catch (error) {
+    avisoDeError($("#aviso-tareas"), "No se pudo subir el archivo", error);
+  } finally {
+    boton.disabled = false;
+  }
+}
+
+/** Paso 1. Pregunta a Canvas y pinta lo que Canvas contesto, no lo que creemos. */
+async function revisarEntrega() {
+  const peticion = peticionDeEntrega();
+  if (!peticion) {
+    nota($("#aviso-tareas"), "Elige una tarea.", "", "mala");
+    return;
+  }
+  if (!peticion.archivo) {
+    nota($("#aviso-tareas"), "Sube un archivo y seleccionalo.", "", "mala");
+    return;
+  }
+
+  const boton = $("#revisar-entrega");
+  boton.disabled = true;
+  $("#estado-entrega").textContent = "revisando contra Canvas...";
+  olvidarRevision();
+
+  try {
+    const { plan } = await enviar("/api/entrega/revisar", peticion);
+    entregaRevisada = peticion;
+
+    const lineas = [
+      `Tarea: ${plan?.tarea || plan?.assignment?.name || peticion.tarea}`,
+      `Vence: ${plan?.vence || plan?.due_at || "sin fecha declarada"}`,
+      `Envio previo: ${plan?.envio_previo || plan?.previous_submission || "ninguno"}`,
+      `Archivo: ${peticion.archivo}`,
+    ];
+    if (peticion.comentario) lineas.push(`Comentario: ${peticion.comentario}`);
+
+    nota(
+      $("#plan-entrega"),
+      "Esto es lo que se va a entregar:",
+      ` ${lineas.join(" · ")}. Si algo no cuadra, cancela.`,
+    );
+    $("#fila-confirmar").hidden = false;
+    $("#estado-entrega").textContent = "revisado, falta confirmar";
+  } catch (error) {
+    $("#estado-entrega").textContent = "";
+    if (error.estado === 401) {
+      nota($("#aviso-tareas"), "Tu sesion de Canvas vencio.", " Renuevala y vuelve a intentar.", "mala");
+      return;
+    }
+    avisoDeError($("#aviso-tareas"), "No se pudo revisar la entrega", error);
+  } finally {
+    boton.disabled = false;
+  }
+}
+
+/** Paso 2. Lo unico de esta plataforma que no se deshace. */
+async function confirmarEntrega() {
+  const ahora = peticionDeEntrega();
+
+  if (!mismaEntrega(entregaRevisada, ahora)) {
+    olvidarRevision();
+    nota(
+      $("#aviso-tareas"),
+      "Cambio algo desde que revisaste.",
+      " No se entrego nada. Revisa de nuevo para ver contra que tarea y con que archivo.",
+      "mala",
+    );
+    return;
+  }
+
+  const boton = $("#confirmar-entrega");
+  boton.disabled = true;
+  $("#estado-entrega").textContent = "entregando en Canvas...";
+
+  try {
+    await enviar("/api/entrega", { ...ahora, confirmar: true });
+    olvidarRevision();
+    $("#estado-entrega").textContent = "";
+    nota(
+      $("#aviso-tareas"),
+      "Entregado en Canvas.",
+      " Revisalo en Canvas para verlo con tus propios ojos: desde aca no se puede deshacer.",
+    );
+    verPendientes();
+  } catch (error) {
+    $("#estado-entrega").textContent = "";
+    avisoDeError($("#aviso-tareas"), "No se pudo entregar", error);
+  } finally {
+    boton.disabled = false;
+  }
+}
+
 /* ───────── Armazon ───────── */
 
 /** Cambia de panel como si se hubiera pulsado su boton en la barra lateral. */
@@ -1718,6 +2021,7 @@ function activarNavegacion() {
       if (boton.dataset.panel === "chat") comprobarModelo();
       if (boton.dataset.panel === "archivos") verArchivos();
       if (boton.dataset.panel === "guias") { comprobarModelo(); cargarGuias(); }
+      if (boton.dataset.panel === "tareas") verPendientes();
       if (boton.dataset.panel === "grafo") verGrafo();
       else pararSimulacion();
     });
@@ -1834,6 +2138,20 @@ function inicio() {
   $("#probar-cookie").addEventListener("click", probarCookie);
   $("#crear-usuario").addEventListener("click", crearUsuario);
   $("#enviar-encuesta").addEventListener("click", enviarEncuesta);
+
+  $("#ver-pendientes").addEventListener("click", verPendientes);
+  $("#subir-archivo").addEventListener("click", subirArchivo);
+  $("#revisar-entrega").addEventListener("click", revisarEntrega);
+  $("#confirmar-entrega").addEventListener("click", confirmarEntrega);
+  $("#cancelar-entrega").addEventListener("click", () => {
+    olvidarRevision();
+    $("#estado-entrega").textContent = "";
+    nota($("#aviso-tareas"), "Cancelado.", " No se entrego nada.");
+  });
+  // Cambiar la tarea o el comentario despues de revisar invalida la revision:
+  // lo que se confirma tiene que ser exactamente lo que se vio.
+  $("#entrega-tarea").addEventListener("change", olvidarRevision);
+  $("#entrega-comentario").addEventListener("input", olvidarRevision);
 
   arrancar().catch(error => {
     $("#acceso").hidden = false;

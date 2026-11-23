@@ -21,6 +21,10 @@ vaults/*
 # de la encuesta: son datos personales de companeros de curso y no se versionan.
 metricas/
 
+# Los archivos que alguien subio para entregar en Canvas: son su tarea, con su
+# nombre y su trabajo adentro. Fuera del repositorio, igual que las cookies.
+entregas/
+
 # Trabajo intermedio
 node_modules/
 trabajos/

@@ -10,6 +10,7 @@
     "check": "node --check web/src/servidor.mjs",
     "test": "node --test",
     "preparar": "node scripts/preparar.mjs",
+    "banco": "node scripts/banco-de-modelos.mjs",
     "up": "npm run preparar && docker compose up -d --build",
     "down": "docker compose down",
     "logs": "docker compose logs -f"

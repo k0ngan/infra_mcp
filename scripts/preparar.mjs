@@ -24,7 +24,7 @@ const PLANTILLA = {
 
 const hecho = [];
 
-for (const carpeta of ["vaults", "secretos", "metricas"]) {
+for (const carpeta of ["vaults", "secretos", "metricas", "entregas"]) {
   const destino = path.join(RAIZ, carpeta);
   if (!fs.existsSync(destino)) {
     fs.mkdirSync(destino, { recursive: true });

@@ -41,6 +41,7 @@ import {
   RAIZ,
 } from "./usuarios.mjs";
 import { ErrorDeCanvas, listarHerramientas, llamar } from "./canvas.mjs";
+import { archivosListos, entregar, guardarArchivo, olvidarArchivo, revisar } from "./entregas.mjs";
 import { EVENTOS, PREGUNTAS, encuestaDe, guardarEncuesta, registrar, resumen } from "./metricas.mjs";
 import { estadoDelModelo, responder } from "./agente.mjs";
 import { archivoDeGuia, generarGuia, listarGuias } from "./guias.mjs";
@@ -456,6 +457,55 @@ const PRIVADAS = {
   "GET /api/herramientas": async (_cuerpo, _url, usuario) =>
     ({ herramientas: await listarHerramientas(usuario) }),
 
+  /* ───────── Tareas pendientes y entrega ───────── */
+
+  /**
+   * Lo que falta por entregar este semestre.
+   *
+   * Lectura pura: `canvas_list_active_tasks` no escribe en ninguna parte. Pega a
+   * Canvas y no al vault, asi que con la cookie vencida responde 401, y eso la
+   * pantalla lo sabe distinguir de "no tienes nada pendiente".
+   */
+  "GET /api/pendientes": async (_cuerpo, _url, usuario) => {
+    const tareas = await llamar(usuario, "canvas_list_active_tasks", {});
+    return { ...tareas, subidos: archivosListos(usuario) };
+  },
+
+  /** Los archivos que este usuario ya subio y puede entregar. */
+  "GET /api/entrega/archivos": async (_cuerpo, _url, usuario) =>
+    ({ subidos: archivosListos(usuario) }),
+
+  /**
+   * Subir un archivo. Todavia no entrega nada: lo deja listo.
+   *
+   * Se separa de la entrega a proposito. Subir es reversible —el archivo queda
+   * en una carpeta del disco de esta persona y se puede borrar— y entregar no.
+   * Juntarlos en un solo boton seria convertir un descuido en algo definitivo.
+   */
+  "POST /api/entrega/archivo": async (cuerpo, _url, usuario) => guardarArchivo(usuario, cuerpo),
+
+  "POST /api/entrega/olvidar": async (cuerpo, _url, usuario) =>
+    olvidarArchivo(usuario, cuerpo.archivo),
+
+  /**
+   * Paso 1 de la entrega: revisar. No manda nada a Canvas.
+   *
+   * Devuelve el plan del MCP para que la pantalla muestre la tarea de verdad, su
+   * vencimiento y el envio previo antes de que alguien confirme.
+   */
+  "POST /api/entrega/revisar": async (cuerpo, _url, usuario) => revisar(usuario, cuerpo),
+
+  /**
+   * Paso 2: entregar. Esto si escribe en Canvas y no se deshace.
+   *
+   * Exige `confirmar: true`; sin eso devuelve 428 y no llama al MCP.
+   */
+  "POST /api/entrega": async (cuerpo, _url, usuario) => {
+    const resultado = await entregar(usuario, cuerpo);
+    registrar(usuario.id, EVENTOS.ENTREGA);
+    return resultado;
+  },
+
   /** Si el modelo local esta vivo y tiene el modelo que se le pide. */
   "GET /api/modelo": async () => estadoDelModelo(),
 
@@ -553,7 +603,16 @@ const servidor = http.createServer(async (req, res) => {
   const token = leerCookieDeSesion(req.headers.cookie);
 
   try {
-    const cuerpo = req.method === "POST" ? await leerCuerpo(req) : {};
+    /*
+     * Un megabyte alcanza para todo lo demas, pero no para un archivo.
+     *
+     * La entrega llega en base64 dentro del JSON, que infla un 33%: el tope de
+     * esa ruta son 68 MB para dejar pasar los 50 MB que acepta el MCP. Es el
+     * unico sitio donde se sube, y queda acotado a esa ruta justamente para que
+     * el resto de la tabla siga barata de proteger.
+     */
+    const tope = clave === "POST /api/entrega/archivo" ? 68_000_000 : 1_000_000;
+    const cuerpo = req.method === "POST" ? await leerCuerpo(req, tope) : {};
 
     if (PUBLICAS[clave]) {
       const resultado = await PUBLICAS[clave](cuerpo, url, null, token);

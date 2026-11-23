@@ -33,20 +33,24 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { MODELO, armarBloques, limpiarTema, redactarProsa } from "./agente.mjs";
+import { MODELO, PERFIL, armarBloques, limpiarTema, redactarProsa, sinRazonamiento } from "./agente.mjs";
 import { llamar } from "./canvas.mjs";
 import { compilar, documentoDeGuia } from "./latex.mjs";
 import { carpetaDelRamo } from "./vault.mjs";
 
-/** Seis secciones son seis llamadas al modelo; con 8B, eso ya son minutos. */
+/*
+ * Seis secciones son seis llamadas al modelo, estrictamente en fila.
+ *
+ * Secuencial a proposito, y conviene dejarlo escrito porque la tentacion de
+ * paralelizarlo es inmediata: Ollama atiende una peticion por vez con un solo
+ * modelo cargado, asi que dos secciones a la vez se pelean el mismo cuello de
+ * botella y ademas duplican el cache de atencion en la VRAM. Saldria mas lento,
+ * no mas rapido.
+ */
 export const MAXIMO_SECCIONES = 6;
 
 /** Debajo de esto no es un parrafo, es el modelo carraspeando. */
 export const MINIMO_PROSA = 40;
-
-/* Lo que ve el modelo por seccion. Deliberadamente poco: ver agente.mjs. */
-const PRESUPUESTO_SECCION = 2400;
-const TOPE_POR_FUENTE_SECCION = 1200;
 
 /* Dos fuentes mas cortas que esto se juntan en una sola seccion. */
 const SECCION_CORTA = 1200;
@@ -111,10 +115,11 @@ export function tituloDeFuente(fuente) {
 
 /* ───────── El esqueleto ───────── */
 
+/* Lo que ve el modelo por seccion. Deliberadamente poco: ver agente.mjs. */
 function material(fuentes) {
   return armarBloques(fuentes, {
-    presupuesto: PRESUPUESTO_SECCION,
-    tope: TOPE_POR_FUENTE_SECCION,
+    presupuesto: PERFIL.presupuestoSeccion,
+    tope: PERFIL.topeFuenteSeccion,
   }).join("\n\n");
 }
 
@@ -161,7 +166,24 @@ export function armarEsqueleto(fuentes, { maximo = MAXIMO_SECCIONES } = {}) {
     });
   }
 
-  const contenido = utiles.filter(f => !AVISOS.has(f.tipo) && f.tipo !== "modulo");
+  /*
+   * La ficha del curso queda fuera, y no por capricho de formato.
+   *
+   * Esa nota es el INDICE del ramo: su texto son enlaces de Obsidian
+   * ("[[Canvas/.../Archivos/1230990 - Apunte.pdf]]"), no materia. Darsela al
+   * modelo como material de una seccion no produce una guia, produce una de dos
+   * cosas, segun el modelo: una lista de rutas de archivo copiadas tal cual, o
+   * un parrafo explicando que no encontro nada. Las dos son una seccion perdida
+   * en el PDF, y se midieron las dos en `scripts/banco-de-modelos.mjs`.
+   *
+   * El codigo ya sabia esto a medias: `generarGuia` falla con 404 cuando la
+   * ficha es la UNICA fuente con texto. Esto solo lo hace consistente para
+   * cuando hay otras — y por eso ese 404 sigue siendo el que avisa, con su
+   * mensaje, en vez de salir una guia vacia.
+   */
+  const contenido = utiles.filter(
+    f => !AVISOS.has(f.tipo) && f.tipo !== "modulo" && f.tipo !== "curso",
+  );
   let acumuladas = [];
 
   const cerrar = () => {
@@ -216,7 +238,9 @@ export function validarCitas(secciones, citasValidas) {
 
 /* ───────── La prosa del modelo ───────── */
 
-const SISTEMA_GUIA = [
+/* Exportado para que `scripts/banco-de-modelos.mjs` mida el prompt de verdad y
+ * no una copia que se desincroniza en cuanto alguien ajuste una linea. */
+export const SISTEMA_GUIA = [
   "Escribes UNA seccion de una guia de estudio para un estudiante de la UTEM.",
   "Usas SOLO el MATERIAL que viene en el mensaje. No agregas conocimiento propio.",
   "Nunca inventas datos, formulas, fechas ni nombres que no esten en el material.",
@@ -235,15 +259,40 @@ const PREAMBULOS = /^(aqui|aquí|claro|por supuesto|perfecto|entendido|bien)\b[^
 /**
  * Deja la respuesta del modelo en prosa limpia.
  *
- * Todo lo que se quita aca es algo que llama3.1:8b filtra igual aunque el prompt
- * se lo prohiba. La parte que no es cosmetica es la ultima: una cita inline que
- * el modelo se invento se borra, porque un `(archivo:999)` impreso en el PDF es
- * exactamente lo que esta plataforma promete no hacer.
+ * Todo lo que se quita aca es algo que el modelo filtra igual aunque el prompt se
+ * lo prohiba. Los patrones se ganaron contra llama3.1:8b y se quedan tal cual al
+ * cambiar de modelo: uno que razona tiende a escribir "Claro, aqui esta la
+ * seccion:" DESPUES de su bloque de pensamiento, no menos. Este archivo es el
+ * unico registro de por que existe cada regex.
+ *
+ * Lo primero que corre es la limpieza de razonamiento, y el orden importa: el
+ * pensamiento del modelo suele repetir las claves de cita que acaba de leer, y
+ * esas claves si estan permitidas, asi que el filtro de citas de mas abajo no las
+ * borraria y el PDF terminaria con el razonamiento citado como si fuera prosa.
+ *
+ * La parte que no es cosmetica es la ultima: una cita inline que el modelo se
+ * invento se borra, porque un `(archivo:999)` impreso en el PDF es exactamente lo
+ * que esta plataforma promete no hacer.
  */
-export function limpiarProsa(texto, citasPermitidas = []) {
-  const permitidas = new Set(citasPermitidas);
+/*
+ * Para comparar un encabezado con lo que escribio el modelo.
+ *
+ * Sin acentos, sin mayusculas y sin signos: el modelo repite el encabezado con
+ * dos puntos al final, o sin la tilde, o en mayusculas, y las tres veces es el
+ * mismo encabezado repetido.
+ */
+const comparable = texto => String(texto || "")
+  .toLowerCase()
+  .normalize("NFD").replace(/[̀-ͯ]/g, "")
+  .replace(/[^a-z0-9 ]/g, " ")
+  .replace(/\s+/g, " ")
+  .trim();
 
-  let limpio = String(texto || "")
+export function limpiarProsa(texto, citasPermitidas = [], encabezado = "") {
+  const permitidas = new Set(citasPermitidas);
+  const repetido = comparable(encabezado);
+
+  let limpio = sinRazonamiento(texto)
     .replace(/\r\n/g, "\n")
     .replace(/^\s*```[a-z]*\s*$/gim, "")
     .trim();
@@ -251,7 +300,16 @@ export function limpiarProsa(texto, citasPermitidas = []) {
   const lineas = limpio.split("\n");
   while (lineas.length) {
     const primera = lineas[0].trim();
-    if (!primera || PREAMBULOS.test(primera) || /^#{1,6}\s/.test(primera) || /^\*\*[^*]+\*\*:?$/.test(primera)) {
+    const esElEncabezado = repetido && comparable(primera) === repetido;
+    if (
+      !primera ||
+      PREAMBULOS.test(primera) ||
+      /^#{1,6}\s/.test(primera) ||
+      /^\*\*[^*]+\*\*:?$/.test(primera) ||
+      // El prompt lo prohibe y el modelo lo escribe igual. Sin esto quedaba
+      // impreso debajo del \section que ya puso el codigo, repetido.
+      esElEncabezado
+    ) {
       lineas.shift();
       continue;
     }
@@ -260,6 +318,15 @@ export function limpiarProsa(texto, citasPermitidas = []) {
   while (lineas.length && /^\s*(fuentes?|citas?)\s*:/i.test(lineas[lineas.length - 1])) lineas.pop();
 
   limpio = lineas.join("\n")
+    // El bucle de arriba solo mira las lineas de ARRIBA, asi que un `###` en
+    // medio del cuerpo pasaba entero: el generador de LaTeX escapa el `#` y
+    // terminaba impreso como "\#\#\#" en el PDF.
+    .replace(/^#{1,6}[ \t]+/gm, "")
+    // Vinetas al formato que pide SISTEMA_GUIA. `latex.mjs` ya agrupa en un
+    // itemize las lineas que empiezan con "- " o "* ", asi que lo que esto
+    // arregla son las otras: un "•" o un "·" quedaba como un parrafo suelto con
+    // la vineta impresa dentro del texto.
+    .replace(/^[ \t]*[*•·][ \t]+/gm, "- ")
     .replace(/\*\*/g, "")
     .replace(/\(([a-z]+:[0-9]+)\)/gi, (todo, cita) => (permitidas.has(cita) ? todo : ""))
     // Quitar una cita deja un hueco antes del punto: "pero no ." se lee peor
@@ -281,6 +348,86 @@ function extractoLiteral(seccion) {
     .replace(/^\[[^\]]+\]\n/gm, "")
     .trim();
   return `Extracto literal de tu material:\n\n${texto}`;
+}
+
+/**
+ * La prosa de cada seccion, una por vez.
+ *
+ * Esta separada de `generarGuia` para poder probarla: generar una guia completa
+ * escribe en el vault y llama a pdflatex, y lo que hay que verificar aca es otra
+ * cosa —que un modelo caido no arrastre la guia entera— asi que el redactor se
+ * puede inyectar.
+ *
+ * `avisos` se recibe y se escribe en vez de devolverse: el llamador junta en la
+ * misma lista los avisos de las fuentes excluidas y los de la redaccion, y el
+ * orden en que salen al pie del PDF es el orden en que ocurrieron.
+ */
+export async function redactarSecciones(esqueleto, {
+  tema = "",
+  sinModelo = false,
+  avisos = [],
+  reportar = () => {},
+  redactor = redactarProsa,
+} = {}) {
+  const redactadas = [];
+
+  /*
+   * Si el modelo se cae, se deja de intentar para toda la guia.
+   *
+   * Antes no: con Ollama apagado, cada una de las seis secciones pagaba su
+   * timeout completo —media hora de reloj para terminar con una guia de puros
+   * extractos— y el pie del PDF salia con seis copias del mismo aviso.
+   */
+  let modeloCaido = false;
+
+  for (const [indice, seccion] of esqueleto.entries()) {
+    reportar(
+      indice,
+      sinModelo
+        ? `extrayendo "${seccion.encabezado}"`
+        : `redactando "${seccion.encabezado}" (${indice + 1} de ${esqueleto.length})`,
+    );
+
+    let cuerpo = "";
+    let origen = "extracto";
+
+    if (!sinModelo && !modeloCaido) {
+      // Un reintento y nada mas. Si el modelo no colabora dos veces seguidas,
+      // el material tal cual es mejor que seguir insistiendo.
+      for (let intento = 0; intento < 2 && !cuerpo; intento += 1) {
+        try {
+          const prosa = await redactor({
+            sistema: SISTEMA_GUIA,
+            instruccion: `Escribe la seccion "${seccion.encabezado}" de una guia sobre "${tema}".`,
+            material: seccion.material,
+          });
+          cuerpo = limpiarProsa(prosa, seccion.fuentes, seccion.encabezado);
+          if (cuerpo) origen = "modelo";
+        } catch (error) {
+          // Ollama caido a mitad no bota el trabajo: lo que ya se redacto se
+          // conserva y el resto sale como extracto.
+          modeloCaido = true;
+          avisos.push(`El modelo dejo de responder: ${error.message}`);
+          if (indice < esqueleto.length - 1) {
+            avisos.push("El resto de las secciones quedo como extracto literal.");
+          }
+          intento = 2;
+        }
+      }
+    }
+
+    if (!cuerpo) {
+      cuerpo = extractoLiteral(seccion);
+      // Si el modelo se cayo ya se aviso una vez, por toda la guia.
+      if (!sinModelo && !modeloCaido) {
+        avisos.push(`La seccion "${seccion.encabezado}" quedo como extracto literal.`);
+      }
+    }
+
+    redactadas.push({ encabezado: seccion.encabezado, cuerpo, fuentes: seccion.fuentes, origen });
+  }
+
+  return redactadas;
 }
 
 /* ───────── Lo que quedo fuera ───────── */
@@ -420,50 +567,13 @@ export async function generarGuia(usuario, peticion = {}, reportar = () => {}) {
   }
 
   const total = esqueleto.length + 3;
-  const redactadas = [];
 
-  for (const [indice, seccion] of esqueleto.entries()) {
-    reportar({
-      hechos: indice + 1,
-      total,
-      paso: sinModelo
-        ? `extrayendo "${seccion.encabezado}"`
-        : `redactando "${seccion.encabezado}" (${indice + 1} de ${esqueleto.length})`,
-    });
-
-    let cuerpo = "";
-    let origen = "extracto";
-
-    if (!sinModelo) {
-      // Un reintento y nada mas. Si el modelo no colabora dos veces seguidas,
-      // el material tal cual es mejor que seguir insistiendo.
-      for (let intento = 0; intento < 2 && !cuerpo; intento += 1) {
-        try {
-          const prosa = await redactarProsa({
-            sistema: SISTEMA_GUIA,
-            instruccion: `Escribe la seccion "${seccion.encabezado}" de una guia sobre "${tema}".`,
-            material: seccion.material,
-          });
-          cuerpo = limpiarProsa(prosa, seccion.fuentes);
-          if (cuerpo) origen = "modelo";
-        } catch (error) {
-          // Ollama caido a mitad no bota el trabajo: lo que ya se redacto se
-          // conserva y el resto sale como extracto.
-          avisosDeLaGuia.push(`El modelo dejo de responder: ${error.message}`);
-          intento = 2;
-        }
-      }
-    }
-
-    if (!cuerpo) {
-      cuerpo = extractoLiteral(seccion);
-      if (!sinModelo) {
-        avisosDeLaGuia.push(`La seccion "${seccion.encabezado}" quedo como extracto literal.`);
-      }
-    }
-
-    redactadas.push({ encabezado: seccion.encabezado, cuerpo, fuentes: seccion.fuentes, origen });
-  }
+  const redactadas = await redactarSecciones(esqueleto, {
+    tema,
+    sinModelo,
+    avisos: avisosDeLaGuia,
+    reportar: (indice, paso) => reportar({ hechos: indice + 1, total, paso }),
+  });
 
   reportar({ hechos: esqueleto.length + 1, total, paso: "validando citas y escribiendo la nota" });
 

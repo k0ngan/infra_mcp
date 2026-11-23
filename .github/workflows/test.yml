@@ -1,4 +1,4 @@
-# Los 70 tests, corriendo fuera de la maquina donde se escribieron.
+# Los tests, corriendo fuera de la maquina donde se escribieron.
 #
 # El proyecto se llama Infraestructura para Ciencia de Datos y presume de
 # ambiente reproducible: que el repositorio lo demuestre solo, en una maquina
