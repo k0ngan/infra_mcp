@@ -4,6 +4,13 @@ Proyecto semestral de **INFB6074 — Infraestructura para Ciencia de Datos**, UT
 
 [![tests](https://github.com/k0ngan/infra_mcp/actions/workflows/test.yml/badge.svg)](https://github.com/k0ngan/infra_mcp/actions/workflows/test.yml)
 
+> Ese badge está en rojo y no es por las pruebas: **GitHub Actions no las está corriendo**, porque
+> la cuenta tiene un bloqueo de facturación y los trabajos no llegan a arrancar («the job was not
+> started because your account is locked due to a billing issue»). Nunca ha corrido en este repo.
+> Mientras siga así, las 135 pruebas se corren en local con `npm test` y eso es lo único que las
+> respalda. Se dice aquí porque el repositorio presume de ambiente reproducible: un badge rojo sin
+> explicación es peor que la explicación.
+
 Lee Canvas con el MCP que ya está escrito, ordena el material en **un vault de Obsidian por
 usuario** y arma **guías de estudio en LaTeX que compila a PDF**. Un modelo local sobre Ollama
 redacta la prosa; todo lo demás es código determinístico.
