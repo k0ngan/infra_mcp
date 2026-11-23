@@ -9,8 +9,8 @@
 # es el contenedor.
 #
 # El modelo se queda afuera, en el Ollama del anfitrion, y el contenedor le habla
-# por host.docker.internal: meterlo adentro serian 4,9 GB de pesos que ya estan
-# en el disco y, de paso, le quitaria la GPU.
+# por host.docker.internal: meterlo adentro serian gigas de pesos que ya estan en
+# el disco y, de paso, le quitaria la GPU.
 services:
   web:
     build: .
@@ -27,8 +27,12 @@ services:
       # todo el mundo de la plataforma.
       PLATAFORMA_SESIONES: "/app/secretos/sesiones.json"
       PLATAFORMA_METRICAS: "/app/metricas"
+      PLATAFORMA_ENTREGAS: "/app/entregas"
       OLLAMA_URL: "http://host.docker.internal:11434"
-      PLATAFORMA_MODELO: "${PLATAFORMA_MODELO:-llama3.1:latest}"
+      # El perfil de cada modelo esta en web/src/agente.mjs; los nombres y sus
+      # pesos, en .env.example.
+      PLATAFORMA_MODELO: "${PLATAFORMA_MODELO:-gemma4:e4b}"
+      PLATAFORMA_TOOLS: "${PLATAFORMA_TOOLS:-0}"
       # La pimienta del hash. Si la declaras, declarala siempre: cambiarla
       # invalida las contraseñas que ya existen.
       PLATAFORMA_SECRETO: "${PLATAFORMA_SECRETO:-}"
@@ -41,6 +45,10 @@ services:
       # La medicion de adopcion y las respuestas de la encuesta. Tambien fuera
       # del repositorio: son datos personales, y sobreviven a `down`.
       - ./metricas:/app/metricas
+      # Los archivos subidos para entregar en Canvas. Al volumen por dos razones:
+      # son la tarea de una persona, y si se perdieran en cada `down` habria que
+      # volver a subirlas.
+      - ./entregas:/app/entregas
       # Los usuarios y los hashes de sus contraseñas. Tiene que existir antes de
       # levantar: si no, Docker crea una CARPETA con ese nombre y el servidor no
       # arranca. `npm run preparar` lo deja listo.

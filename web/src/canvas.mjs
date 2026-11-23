@@ -10,12 +10,13 @@
  * division no es "lee" contra "escribe", porque ordenar el vault de Obsidian y
  * dejar una guia de estudio tambien escriben: la division es DONDE escriben.
  *
- *   - Permitido: escribir en el vault del usuario, en su propio disco.
- *   - Prohibido: escribir en Canvas.
+ *   - Libre: escribir en el vault del usuario, en su propio disco.
+ *   - Con permiso explicito: escribir en Canvas, que es irreversible.
  *
- * Por eso `canvas_submit_assignment` no esta. Es la unica herramienta del MCP que
- * manda algo de vuelta a Canvas, no se deshace y en varios ramos consume un
- * intento. Esta plataforma es para estudiar.
+ * Esa segunda categoria tiene una sola herramienta, `canvas_submit_assignment`,
+ * y durante un buen rato no existio: estaba simplemente prohibida. La pantalla
+ * ahora permite entregar, en dos pasos, asi que la regla se volvio mas estrecha
+ * en vez de desaparecer. Esta explicado donde se define la categoria, mas abajo.
  */
 
 export const HERRAMIENTAS_PERMITIDAS = new Set([
@@ -33,10 +34,54 @@ export const HERRAMIENTAS_PERMITIDAS = new Set([
   "canvas_export_course_sources",
   "canvas_study_sources",
   "canvas_write_study_guide",
+  // Entregar. La unica que escribe en Canvas, y por eso tiene su propio
+  // guardian mas abajo: estar aca no alcanza para poder invocarla.
+  "canvas_submit_assignment",
 ]);
 
-/** La que nunca se expone, nombrada para que se vea en el codigo y en los tests. */
-export const HERRAMIENTA_PROHIBIDA = "canvas_submit_assignment";
+/**
+ * Las que escriben en Canvas. Hoy es una sola, y pide permiso explicito.
+ *
+ * Durante un buen rato `canvas_submit_assignment` estuvo simplemente prohibida y
+ * la plataforma presumia de no escribir en Canvas nunca. Ahora la pantalla si
+ * permite entregar, asi que la regla cambio — pero no desaparecio, se volvio mas
+ * estrecha:
+ *
+ *   - `llamar` la rechaza salvo que quien llama pida `escribirEnCanvas: true`.
+ *     Una ruta que se agregue manana no puede entregar por descuido.
+ *   - no esta en `HERRAMIENTAS_DEL_AGENTE`, asi que el modelo no la ve ni con el
+ *     canal de herramientas prendido. Entregar lo decide una persona.
+ *   - el propio MCP exige `confirm: true` para entregar de verdad; sin eso solo
+ *     valida y devuelve el plan. La pantalla usa ese paso como la primera mitad
+ *     de la confirmacion, no se inventa una propia.
+ *   - `CANVAS_UPLOAD_DIR` acota de donde puede salir el archivo: ver usuarios.mjs.
+ *
+ * Sigue siendo cierto lo importante: nada sale hacia Canvas sin que una persona
+ * lo haya visto y lo haya confirmado.
+ */
+export const HERRAMIENTAS_QUE_ESCRIBEN_EN_CANVAS = new Set(["canvas_submit_assignment"]);
+
+/**
+ * Lo que puede ver un MODELO, si algun dia se le dan herramientas.
+ *
+ * Es un subconjunto estricto de las permitidas, y mas chico por dos razones que
+ * no se parecen entre si:
+ *
+ *   - `canvas_sync_*` y `canvas_download_*` son minutos de red y de disco. Que un
+ *     modelo las dispare porque le parecio buena idea es una espera larguisima
+ *     que el estudiante no pidio.
+ *   - `canvas_write_study_guide` queda fuera por una razon de fondo: toda la
+ *     auditabilidad de una guia depende de que las citas las escriba el codigo.
+ *     Si el modelo pudiera escribir la guia, esa garantia se cae.
+ *
+ * Lo que queda es buscar y mirar: lo que de verdad necesita para responder.
+ */
+export const HERRAMIENTAS_DEL_AGENTE = new Set([
+  "canvas_study_sources",
+  "canvas_list_courses",
+  "canvas_list_active_tasks",
+  "canvas_course_inventory",
+]);
 
 let siguienteId = 1;
 
@@ -69,10 +114,10 @@ function clasificar(mensaje) {
  * @param {string} herramienta
  * @param {object} argumentos
  */
-export async function llamar(usuario, herramienta, argumentos = {}) {
-  if (herramienta === HERRAMIENTA_PROHIBIDA) {
+export async function llamar(usuario, herramienta, argumentos = {}, { escribirEnCanvas = false } = {}) {
+  if (HERRAMIENTAS_QUE_ESCRIBEN_EN_CANVAS.has(herramienta) && !escribirEnCanvas) {
     throw new ErrorDeCanvas(
-      "Esta plataforma no entrega tareas: solo ordena material y arma guias de estudio.",
+      `${herramienta} escribe en Canvas y no se deshace: hay que pedirlo explicitamente.`,
       { herramienta, estado: 403 },
     );
   }
@@ -115,15 +160,27 @@ export async function llamar(usuario, herramienta, argumentos = {}) {
   }
 }
 
-/** Las herramientas que esta plataforma expone, para poder auditarlas desde afuera. */
-export async function listarHerramientas(usuario) {
+/**
+ * Las herramientas que esta plataforma expone, para poder auditarlas desde afuera.
+ *
+ * `esquema` se incluye porque es lo que necesita el canal de `tool_calls` para
+ * declararle al modelo que argumentos acepta cada herramienta. Va aparte del
+ * nombre y la descripcion para que la respuesta de `/api/herramientas`, que es
+ * humana, se siga leyendo igual.
+ */
+export async function listarHerramientas(usuario, { soloDelAgente = false } = {}) {
   const respuesta = await usuario.handler({
     jsonrpc: "2.0",
     id: siguienteId++,
     method: "tools/list",
   });
+  const permitidas = soloDelAgente ? HERRAMIENTAS_DEL_AGENTE : HERRAMIENTAS_PERMITIDAS;
   const todas = respuesta?.result?.tools || [];
   return todas
-    .filter(herramienta => HERRAMIENTAS_PERMITIDAS.has(herramienta.name))
-    .map(({ name, description }) => ({ nombre: name, descripcion: description }));
+    .filter(herramienta => permitidas.has(herramienta.name))
+    .map(({ name, description, inputSchema }) => ({
+      nombre: name,
+      descripcion: description,
+      esquema: inputSchema,
+    }));
 }

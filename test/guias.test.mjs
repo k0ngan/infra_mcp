@@ -14,6 +14,7 @@ import {
   armarEsqueleto,
   limpiarProsa,
   nombreDeGuia,
+  redactarSecciones,
   resumirExcluidas,
   tituloDeFuente,
   tituloPorDefecto,
@@ -178,6 +179,224 @@ test("lo que queda demasiado corto no es prosa: devuelve vacio", () => {
   assert.equal(limpiarProsa("ok.", []), "");
   assert.equal(limpiarProsa("", []), "");
   assert.equal(limpiarProsa("x".repeat(MINIMO_PROSA), []).length, MINIMO_PROSA);
+});
+
+test("el encabezado repetido no se imprime debajo del que ya puso el codigo", () => {
+  /*
+   * SISTEMA_GUIA lo prohibe y los modelos lo escriben igual. Sin esto quedaba
+   * el titulo dos veces en el PDF: el del \section y el del modelo.
+   */
+  const limpio = limpiarProsa(
+    "Lo que dijo el profesor: fechas y alcance\n\nLa prueba 1 es el 14 de noviembre, segun el aviso del ramo.",
+    PERMITIDAS,
+    "Lo que dijo el profesor: fechas y alcance",
+  );
+  assert.match(limpio, /^La prueba 1/);
+  assert.doesNotMatch(limpio, /dijo el profesor/);
+});
+
+test("el encabezado se reconoce con tildes, mayusculas o dos puntos de mas", () => {
+  const variantes = [
+    "COMO VIENE ORGANIZADA LA MATERIA",
+    "Cómo viene organizada la materia:",
+    "Como viene organizada la materia.",
+  ];
+  for (const variante of variantes) {
+    const limpio = limpiarProsa(
+      `${variante}\n\nLos modulos del ramo vienen ordenados por unidad, segun el material.`,
+      PERMITIDAS,
+      "Como viene organizada la materia",
+    );
+    assert.match(limpio, /^Los modulos/, `no reconocio "${variante}"`);
+  }
+});
+
+test("un parrafo que solo se parece al encabezado no se borra", () => {
+  // La regla compara el texto completo, no busca parecidos: borrar prosa de
+  // verdad seria peor que dejar un titulo repetido.
+  const texto = "Lo que dijo el profesor sobre las fechas fue que la prueba se adelanta al viernes.";
+  assert.equal(limpiarProsa(texto, PERMITIDAS, "Lo que dijo el profesor: fechas y alcance"), texto);
+});
+
+test("el razonamiento del modelo no llega al PDF", () => {
+  const limpio = limpiarProsa(
+    "<think>Reviso el anuncio y armo dos parrafos.</think>\nLa unidad IV entra en la prueba del viernes.",
+    PERMITIDAS,
+  );
+  assert.equal(limpio, "La unidad IV entra en la prueba del viernes.");
+  assert.doesNotMatch(limpio, /think/i);
+});
+
+test("una cita permitida dentro del razonamiento tampoco sobrevive", () => {
+  /*
+   * El filtro de citas solo borra las que NO estan permitidas, asi que una clave
+   * de verdad citada dentro del pensamiento pasaria el filtro y se imprimiria
+   * como si fuera prosa. Por eso el razonamiento se saca antes.
+   */
+  const limpio = limpiarProsa(
+    "<think>El anuncio (anuncio:131609) dice que entra la unidad IV, lo uso.</think>\nEntra hasta la unidad IV, segun el calendario del ramo.",
+    PERMITIDAS,
+  );
+  assert.doesNotMatch(limpio, /lo uso/);
+  assert.match(limpio, /^Entra hasta la unidad IV/);
+});
+
+test("un razonamiento cortado a medias no se publica: queda vacio y cae al extracto", () => {
+  // Pasa cuando el presupuesto de tokens se agota pensando.
+  assert.equal(limpiarProsa("<think>Voy a revisar el calendario del ramo y despues", PERMITIDAS), "");
+});
+
+test("un encabezado en medio del cuerpo tambien se saca, no solo al principio", () => {
+  // El bucle de limpieza solo miraba las lineas de arriba, asi que un "###" en
+  // medio llegaba al PDF impreso como \#\#\#.
+  const limpio = limpiarProsa(
+    ["Un AFD es una quintupla y entra en la prueba.", "### Ejemplo", "El del calendario del ramo."].join("\n"),
+    PERMITIDAS,
+  );
+  assert.doesNotMatch(limpio, /#/);
+  assert.match(limpio, /Ejemplo/);
+});
+
+test("las vinetas quedan en el formato que pide el prompt", () => {
+  const limpio = limpiarProsa(
+    ["* Lo primero que entra es la unidad III.", "• Lo segundo es la unidad IV."].join("\n"),
+    PERMITIDAS,
+  );
+  assert.match(limpio, /^- Lo primero/m);
+  assert.match(limpio, /^- Lo segundo/m);
+});
+
+test("la ficha del curso no se convierte en seccion: es un indice de enlaces", () => {
+  /*
+   * Su texto son enlaces de Obsidian, no materia. Cuando entraba como seccion,
+   * el modelo devolvia o una lista de rutas copiadas o un parrafo diciendo que
+   * no encontro nada; las dos cosas son una seccion perdida en el PDF.
+   */
+  const esqueleto = armarEsqueleto([
+    fuente("curso", "curso", "Curso", "[[Canvas/ramo/Archivos/1230990 - Apunte.pdf]]\n[[Canvas/ramo/Archivos/1230865 - Algoritmos.pdf]]"),
+    fuente("archivo:1", "archivo", "Apunte de automatas", "Un AFD es una quintupla."),
+  ]);
+
+  const citas = esqueleto.flatMap(s => s.fuentes);
+  assert.ok(!citas.includes("curso"), "la ficha del curso no puede ser material de una seccion");
+  assert.ok(citas.includes("archivo:1"));
+  assert.ok(esqueleto.every(s => !s.material.includes("[[Canvas/")));
+});
+
+/* ───────── redactarSecciones ───────── */
+
+const SECCIONES = [
+  { encabezado: "Unidad I", material: "[anuncio:131609 — Aviso]\nla prueba 1 es el 12", fuentes: ["anuncio:131609"] },
+  { encabezado: "Unidad II", material: "[archivo:1 — Apunte]\nteoria de automatas", fuentes: ["archivo:1"] },
+  { encabezado: "Unidad III", material: "[archivo:2 — Apunte]\nlenguajes regulares", fuentes: ["archivo:2"] },
+];
+
+test("el modelo caido se intenta una vez y no una por seccion", async () => {
+  let llamadas = 0;
+  const avisos = [];
+
+  const redactadas = await redactarSecciones(SECCIONES, {
+    tema: "automatas",
+    avisos,
+    redactor: async () => {
+      llamadas += 1;
+      throw Object.assign(new Error("No se pudo hablar con Ollama"), { estado: 503 });
+    },
+  });
+
+  // Lo que evita que una guia de puros extractos se demore seis timeouts.
+  assert.equal(llamadas, 1);
+  assert.equal(redactadas.length, 3);
+  assert.ok(redactadas.every(s => s.origen === "extracto"));
+  // Un aviso de que el modelo se cayo, no tres.
+  assert.equal(avisos.filter(a => a.includes("dejo de responder")).length, 1);
+  // Y ningun aviso por seccion: uno solo por toda la guia.
+  assert.equal(avisos.filter(a => a.startsWith("La seccion")).length, 0);
+  assert.ok(avisos.some(a => a.includes("El resto de las secciones")));
+});
+
+test("una seccion que sale mal no arrastra a las que vienen detras", async () => {
+  /*
+   * El corte es solo para cuando el modelo NO esta (503). Una respuesta vacia
+   * es un 502 y es de esa seccion: la siguiente puede salir perfecta. La
+   * primera version cortaba con cualquier error y un tropiezo en la seccion 2
+   * dejaba las secciones 3 a 6 como extractos crudos.
+   */
+  let llamadas = 0;
+  const avisos = [];
+
+  const redactadas = await redactarSecciones(SECCIONES, {
+    tema: "automatas",
+    avisos,
+    redactor: async () => {
+      llamadas += 1;
+      if (llamadas === 1) throw Object.assign(new Error("El modelo respondio vacio."), { estado: 502 });
+      return "Los lenguajes regulares se cierran bajo union, segun el apunte del ramo.";
+    },
+  });
+
+  // Una llamada por seccion: al lanzar excepcion se salta el reintento, que es
+  // para cuando el modelo contesta algo que al limpiarlo queda vacio.
+  assert.equal(llamadas, 3);
+  assert.equal(redactadas[0].origen, "extracto", "la que fallo cae al extracto");
+  assert.equal(redactadas[1].origen, "modelo", "pero las siguientes se intentan igual");
+  assert.equal(redactadas[2].origen, "modelo");
+  assert.ok(!avisos.some(a => a.includes("El resto de las secciones")));
+});
+
+test("lo que ya se redacto se conserva cuando el modelo se cae a mitad", async () => {
+  let llamadas = 0;
+  const avisos = [];
+
+  const redactadas = await redactarSecciones(SECCIONES, {
+    tema: "automatas",
+    avisos,
+    redactor: async () => {
+      llamadas += 1;
+      if (llamadas === 1) return "La prueba 1 es el 12, segun el aviso del ramo (anuncio:131609).";
+      throw Object.assign(new Error("No se pudo hablar con Ollama"), { estado: 503 });
+    },
+  });
+
+  assert.equal(redactadas[0].origen, "modelo");
+  assert.equal(redactadas[1].origen, "extracto");
+  assert.equal(redactadas[2].origen, "extracto");
+  // Dos llamadas: la que salio bien y la que fallo. La tercera ya no se intenta.
+  assert.equal(llamadas, 2);
+});
+
+test("una seccion vacia se reintenta una vez y despues cae al extracto", async () => {
+  let llamadas = 0;
+  const avisos = [];
+
+  const redactadas = await redactarSecciones([SECCIONES[0]], {
+    tema: "automatas",
+    avisos,
+    redactor: async () => {
+      llamadas += 1;
+      return "ok.";  // mas corto que MINIMO_PROSA: limpiarProsa devuelve ""
+    },
+  });
+
+  assert.equal(llamadas, 2, "un reintento, no mas");
+  assert.equal(redactadas[0].origen, "extracto");
+  assert.ok(avisos.some(a => a.includes("quedo como extracto literal")));
+});
+
+test("con sin_modelo no se llama al modelo ni una vez", async () => {
+  let llamadas = 0;
+  const avisos = [];
+
+  const redactadas = await redactarSecciones(SECCIONES, {
+    sinModelo: true,
+    avisos,
+    redactor: async () => { llamadas += 1; return "no deberia pasar"; },
+  });
+
+  assert.equal(llamadas, 0);
+  assert.equal(avisos.length, 0, "pedir extractos a proposito no es una falla que avisar");
+  assert.ok(redactadas.every(s => s.origen === "extracto"));
+  assert.ok(redactadas.every(s => s.cuerpo.startsWith("Extracto literal")));
 });
 
 /* ───────── nombres y resumenes ───────── */

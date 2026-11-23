@@ -5,9 +5,9 @@
 # guias. El MCP de Canvas entra por `npm ci`, fijado por commit en el
 # package-lock, no por una carpeta hermana del disco.
 #
-# Lo que NO entra es el modelo: Ollama se queda en el anfitrion. Meter
-# llama3.1 (4,9 GB) en la imagen la haria inmanejable y ademas le quitaria la
-# GPU, que es justo lo que hace que responda en segundos.
+# Lo que NO entra es el modelo: Ollama se queda en el anfitrion. Meter los pesos
+# en la imagen (entre 3 y 7 GB segun el modelo) la haria inmanejable y ademas le
+# quitaria la GPU, que es justo lo que hace que responda en segundos.
 FROM node:24-slim
 
 # El conjunto minimo que compila el preambulo de web/src/latex.mjs:
@@ -52,7 +52,9 @@ ENV PLATAFORMA_HOST=0.0.0.0 \
     PLATAFORMA_COOKIES=/app/secretos \
     PLATAFORMA_SESIONES=/app/secretos/sesiones.json \
     PLATAFORMA_METRICAS=/app/metricas \
-    OLLAMA_URL=http://host.docker.internal:11434
+    PLATAFORMA_ENTREGAS=/app/entregas \
+    OLLAMA_URL=http://host.docker.internal:11434 \
+    PLATAFORMA_MODELO=gemma4:e4b
 
 EXPOSE 8080
 

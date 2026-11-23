@@ -10,6 +10,7 @@
     "check": "node --check web/src/servidor.mjs",
     "test": "node --test",
     "preparar": "node scripts/preparar.mjs",
+    "banco": "node scripts/banco-de-modelos.mjs",
     "up": "npm run preparar && docker compose up -d --build",
     "down": "docker compose down",
     "logs": "docker compose logs -f"
@@ -19,6 +20,6 @@
   },
   "_dependencias": "Una sola, fijada por commit, y esa tampoco tiene dependencias propias. Es lo que hace que clonar el repositorio y correrlo sea verdad: antes el MCP se buscaba en una carpeta hermana que solo existia en una maquina.",
   "dependencies": {
-    "mcp-canvas": "github:k0ngan/mcp_canvas#85c16d147a87cdc48fae20b26df80f0cc740fdda"
+    "mcp-canvas": "github:k0ngan/mcp_canvas#5a87af85f45f0f70d9cae1be6f63b06073278dcc"
   }
 }

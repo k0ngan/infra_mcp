@@ -43,7 +43,7 @@
         <li>
           <span class="marca" aria-hidden="true">&check;</span>
           <span><strong>Tu cuenta es tuya</strong>
-          Tu material no se mezcla con el de nadie, y la plataforma nunca entrega tareas por ti.</span>
+          Tu material no se mezcla con el de nadie, y hacia Canvas no sale nada que no hayas confirmado tu.</span>
         </li>
       </ul>
 
@@ -108,6 +108,7 @@
             <button class="nav-item" data-panel="grafo">Grafo</button>
             <button class="nav-item" data-panel="guias">Guias</button>
             <button class="nav-item" data-panel="chat">Chat</button>
+            <button class="nav-item" data-panel="tareas">Tareas</button>
           </div>
         </div>
         <div class="nav-seccion">
@@ -339,6 +340,73 @@
 
           <div id="listado-ramo"></div>
           <div id="aviso-archivos" class="nota" hidden></div>
+        </section>
+
+        <!-- Tareas pendientes y entrega -->
+        <section id="panel-tareas" class="panel" hidden>
+          <h2 class="titulo-panel">Tareas pendientes</h2>
+          <p class="bajada">
+            Lo que te falta por entregar, directo de Canvas. Entregar desde aqui
+            va en dos pasos a proposito: primero se revisa contra Canvas que la
+            tarea, la fecha y el archivo sean los correctos, y recien despues se
+            manda. Una entrega no se deshace y en varios ramos consume un intento.
+          </p>
+
+          <div class="card">
+            <div class="fila">
+              <button id="ver-pendientes" class="boton" type="button">Ver mis pendientes</button>
+              <span id="estado-pendientes" class="nota"></span>
+            </div>
+          </div>
+
+          <div id="aviso-tareas" class="nota" hidden></div>
+          <div id="listado-pendientes"></div>
+
+          <div class="card" id="card-entrega" hidden>
+            <h3>Entregar</h3>
+
+            <div class="fila">
+              <div class="campo ancho">
+                <label for="entrega-tarea">Tarea</label>
+                <select id="entrega-tarea"></select>
+              </div>
+            </div>
+
+            <div class="fila">
+              <div class="campo ancho">
+                <label for="entrega-archivo">Archivo</label>
+                <input id="entrega-archivo" type="file" />
+                <p class="ayuda" id="ayuda-extensiones">
+                  Canvas acepta por esta via .pdf, .sql y .pbix. Otro formato hay
+                  que convertirlo, o entregarlo a mano en Canvas.
+                </p>
+              </div>
+              <button id="subir-archivo" class="boton suave" type="button">Subir</button>
+            </div>
+
+            <div id="listado-subidos" class="fila"></div>
+
+            <div class="fila">
+              <div class="campo ancho">
+                <label for="entrega-comentario">Comentario para el profesor (opcional)</label>
+                <input id="entrega-comentario" type="text" maxlength="2000" />
+              </div>
+            </div>
+
+            <div class="fila">
+              <button id="revisar-entrega" class="boton" type="button">Revisar entrega</button>
+              <span id="estado-entrega" class="nota"></span>
+            </div>
+
+            <!-- Paso 2: solo aparece despues de revisar, con lo que dijo Canvas -->
+            <div id="plan-entrega" class="nota" hidden></div>
+            <div class="fila" id="fila-confirmar" hidden>
+              <button id="confirmar-entrega" class="boton peligro" type="button">
+                Confirmar y entregar en Canvas
+              </button>
+              <button id="cancelar-entrega" class="boton suave" type="button">Cancelar</button>
+            </div>
+          </div>
         </section>
 
         <!-- Grafo -->

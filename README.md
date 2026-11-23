@@ -4,6 +4,13 @@ Proyecto semestral de **INFB6074 — Infraestructura para Ciencia de Datos**, UT
 
 [![tests](https://github.com/k0ngan/infra_mcp/actions/workflows/test.yml/badge.svg)](https://github.com/k0ngan/infra_mcp/actions/workflows/test.yml)
 
+> Ese badge está en rojo y no es por las pruebas: **GitHub Actions no las está corriendo**, porque
+> la cuenta tiene un bloqueo de facturación y los trabajos no llegan a arrancar («the job was not
+> started because your account is locked due to a billing issue»). Nunca ha corrido en este repo.
+> Mientras siga así, las 135 pruebas se corren en local con `npm test` y eso es lo único que las
+> respalda. Se dice aquí porque el repositorio presume de ambiente reproducible: un badge rojo sin
+> explicación es peor que la explicación.
+
 Lee Canvas con el MCP que ya está escrito, ordena el material en **un vault de Obsidian por
 usuario** y arma **guías de estudio en LaTeX que compila a PDF**. Un modelo local sobre Ollama
 redacta la prosa; todo lo demás es código determinístico.
@@ -17,12 +24,44 @@ rellenarlo.
 > La idea original era darle las herramientas del MCP a un agente para que decidiera cuál llamar.
 > No se pudo, y queda escrito por qué en `web/src/agente.mjs`: `llama3.1:8b` sobre Ollama 0.21.2
 > no emite `tool_calls`. Terminó siendo mejor así.
+>
+> Los modelos que usa ahora sí las emiten, así que el canal existe otra vez detrás de
+> `PLATAFORMA_TOOLS`, **apagado por defecto**. Lo que no cambió es el reparto: aun con
+> herramientas disponibles, quien elige el material es el código. Y lo que un modelo podría ver
+> es un subconjunto estricto y más corto de lo permitido (`HERRAMIENTAS_DEL_AGENTE`): nada de
+> `canvas_sync_*` ni `canvas_download_*`, que son minutos de red que nadie pidió, y tampoco
+> `canvas_write_study_guide`, porque toda la auditabilidad depende de que las citas las escriba
+> el código. Hay pruebas que lo verifican.
 
-**Es solo para estudiar: nunca escribe en Canvas.** La herramienta `canvas_submit_assignment`
-no está en la lista de permitidas (`web/src/canvas.mjs`) y el entorno que se le arma a cada
-usuario no declara `CANVAS_UPLOAD_DIR`, así que el MCP tampoco podría subir nada aunque alguien
-la invocara. Entregar una tarea no se deshace y en varios ramos consume un intento; esa decisión
-se toma en Canvas, a mano.
+**Hacia Canvas no sale nada que no hayas confirmado tú.** Durante un buen rato esto decía «nunca
+escribe en Canvas», y era más fácil de prometer: `canvas_submit_assignment` estaba prohibida y
+listo. La pantalla ahora permite entregar, así que la regla se volvió más estrecha en vez de
+desaparecer. Entregar una tarea no se deshace y en varios ramos consume un intento, y eso está
+defendido en cuatro capas que no se pisan entre sí:
+
+1. **Dos pasos, y el primero lo exige el MCP.** `canvas_submit_assignment` sin `confirm: true`
+   solo valida y devuelve el plan. La pantalla muestra *eso* —la tarea real, el vencimiento, el
+   envío previo, el archivo— y recién con un segundo clic entrega. No es una confirmación
+   inventada por la plataforma: son los datos que contestó Canvas.
+2. **Lo que confirmas es exactamente lo que viste.** Si cambias de tarea, de archivo o de
+   comentario después de revisar, la confirmación se invalida y hay que revisar de nuevo. El
+   error que esto previene —revisar la tarea 3 y confirmar la 4— es el único que no se puede
+   reparar después.
+3. **El archivo solo puede salir de tu carpeta.** `CANVAS_UPLOAD_DIR` apunta a una carpeta por
+   usuario y el MCP rechaza cualquier ruta de fuera. Antes no se declaraba, y eso era la
+   garantía; declararla acotada da una garantía distinta, no menos: una entrega solo puede llevar
+   un archivo que esa persona subió por la pantalla, nunca una ruta arbitraria del disco ni la
+   tarea de otro.
+4. **El modelo nunca la ve.** No está en `HERRAMIENTAS_DEL_AGENTE`, y `llamar()` la rechaza salvo
+   que quien llama lo pida explícitamente, así que una ruta nueva no puede entregar por descuido.
+   Entregar lo decide una persona, siempre.
+
+Hay catorce pruebas sobre esto en `test/entregas.test.mjs`, y lo que verifican no es que funcione
+—eso se ve usándolo— sino que no se entregue sin confirmar, que un nombre con `../` no saque el
+archivo de su carpeta, que nadie entregue el archivo de otro y que una extensión que Canvas no
+acepta se rechace diciendo cuáles sí. La lista de extensiones la decide el MCP (`.pdf`, `.sql`,
+`.pbix`) y esta plataforma **no la amplía**: si una tarea pide otro formato, lo dice y se entrega
+a mano.
 
 ## Cómo se levanta
 
@@ -37,9 +76,9 @@ corriendo. **`down` no borra nada tuyo** — el material, las guías, los usuari
 Canvas viven en el disco del anfitrión, montados como volúmenes; lo único que se va es el
 contenedor.
 
-Hace falta Docker. Y **Ollama corriendo en el anfitrión**, no dentro de la imagen: meter
-`llama3.1` adentro serían 4,9 GB de pesos que ya están en el disco y, de paso, le quitaría la
-GPU. El contenedor le habla por `host.docker.internal`.
+Hace falta Docker. Y **Ollama corriendo en el anfitrión**, no dentro de la imagen: meter los
+pesos adentro serían gigas que ya están en el disco y, de paso, le quitaría la GPU. El contenedor
+le habla por `host.docker.internal`.
 
 ### Sin Docker
 
@@ -101,6 +140,7 @@ Lo que sí se monta, porque es tuyo y tiene que sobrevivir a `down`:
 | `secretos/` | `/app/secretos` | las cookies de Canvas y las sesiones abiertas |
 | `usuarios.json` | `/app/usuarios.json` | los usuarios y los hashes de sus contraseñas |
 | `metricas/` | `/app/metricas` | el registro de uso y las respuestas de la encuesta |
+| `entregas/` | `/app/entregas` | los archivos subidos para entregar, una carpeta por usuario |
 
 `usuarios.json` tiene que existir **antes** de levantar: un bind mount cuyo origen no existe
 Docker lo crea como carpeta, y entonces el servidor muere con un error que no explica nada. De
@@ -176,12 +216,120 @@ Eliges un ramo y un tema, y sale un PDF armado solo con tu material. El reparto,
 
 Lo que no se puede hacer, se dice:
 
-- **Sin Ollama**, la guía se arma igual marcando «solo extractos literales»: el material tal cual,
-  rotulado, sin redactar. El pie del PDF declara que no se usó modelo.
+- **Sin modelo**, la guía se arma igual marcando «solo extractos literales»: el material tal cual,
+  rotulado, sin redactar. El pie del PDF declara que no se usó modelo. Y si el modelo se cae a
+  mitad, lo que ya se redactó se conserva: el resto sale como extracto, con un aviso, sin que la
+  guía espere un timeout por cada sección que falta.
 - **Sin LaTeX**, quedan el `.md` y el `.tex` y la pantalla explica por qué no hay PDF.
 - **Si el ramo no tiene material con texto**, no se escribe nada: falla diciendo qué falta. Más
   vale eso que un PDF bonito que no dice nada.
 - Lo que quedó fuera se cuenta por motivo, en pantalla y en el pie del PDF.
+
+### Qué modelo y por qué
+
+No se eligió de oído: se midió. `scripts/banco-de-modelos.mjs` (`npm run banco`) corre ocho
+modelos sobre **once secciones armadas con material real del vault**, de tres ramos distintos, con
+`SISTEMA_GUIA` importado del código para que el banco no mida un prompt que ya cambió.
+
+Mide esta tarea y no las de los benchmarks públicos, porque no se parecen: aquí se le pide
+**redactar en español de Chile a partir de pasajes dados, sin inventar y obedeciendo instrucciones
+negativas** (no escribas el encabezado, no pongas una línea de «Fuentes:», no uses markdown). Un
+modelo que programa bien puede ser malísimo en eso.
+
+Las ponderaciones están escritas y razonadas en el archivo: **fidelidad 50, utilidad 30,
+formato 15, velocidad 5.** Un modelo rápido que invente una fecha tiene que perder contra uno lento
+que no, porque una guía que dice «la prueba es el 28» cuando el anuncio dice 27 hace llegar tarde a
+alguien. El formato pesa poco porque el código lo limpia; la velocidad, porque entre 3 y 5 segundos
+nadie nota la diferencia.
+
+| Modelo | Peso | Nota | Fiel | Cifras | s/sección | tok/s | En VRAM |
+|---|---|---|---|---|---|---|---|
+| **`gemma4:e4b`** | 6,1 GiB | ~98 | 100% | **99%** | **1,1** | **149** | 100% |
+| `gemma4:12b` | 7,5 GiB | 98,4 | 100% | 95% | 7,1 | 19 | 100% |
+| `qwen3.5:9b-q4_K_M` | 6,1 GiB | 98,1 | 100% | 94% | 8,0 | 30 | 84% |
+| `qwen3:8b` | 4,9 GiB | 96,1 | 100% | 90% | 8,5 | 25 | 80% |
+| `qwen3.5:4b-q4_K_M` | 3,1 GiB | 95,6 | 89% | 96% | 2,1 | 92 | 100% |
+| `gemma4:e2b-it-qat` | 4,0 GiB | 95,0 | 89% | 96% | 0,9 | 155 | 100% |
+| `granite4:latest` | 2,0 GiB | 91,1 | 89% | 94% | 3,0 | 126 | 100% |
+| `llama3.1:latest` | 4,6 GiB | 90,2 | **78%** | 91% | 6,9 | 35 | 87% |
+
+«Fiel» es la proporción de secciones donde no inventó ninguna cifra, ningún mes y ninguna cita.
+«Cifras» es cuántas fechas, horas y salas del material sobreviven textuales en la prosa.
+
+**Cuánto confiar en la nota.** Repetida sobre el mismo modelo varía ±1 a 2 puntos, así que una
+diferencia menor que eso no significa nada: `gemma4:e4b` midió 97,2 y 99,1 en dos corridas
+limpias, y los tres primeros de la tabla están empatados. Lo que **sí** es reproducible corrida a
+corrida es la velocidad, la residencia en VRAM y las dos columnas de fidelidad, y ahí las
+diferencias son grandes.
+
+> **El banco tuvo un defecto que falseaba sus propios números, y conviene que quede escrito.**
+> Mandaba `keep_alive: "15m"` copiando a la plataforma, así que al pasar al modelo siguiente el
+> anterior seguía residente y el nuevo entraba en la VRAM que sobraba. El síntoma que lo delató
+> fue `gemma4:e4b` midiendo 35 s por sección y 5 tok/s cuando es capaz de 1,1 y 149: había quedado
+> `gemma4:12b` ocupando la tarjeta, con 221 MiB libres. Eso explicaba también por qué la misma
+> nota se movía hasta ocho puntos según el **orden** en que se corrieran los modelos. Ahora el
+> banco descarga todo antes de cada candidato, y todas las cifras de la tabla son de tarjeta
+> limpia. La lección es incómoda y vale igual: un banco de pruebas también hay que depurarlo.
+
+Lo que se aprende de la tabla no es qué modelo gana, es **dónde está el filo**. Son dos filos
+distintos y no coinciden:
+
+- **La fidelidad se compra con tamaño.** Los cuatro de 4,9 GiB o más no inventaron nada en ninguna
+  sección; los tres chicos inventan algo en 1 de cada 9; y `llama3.1` inventa en 2 de cada 9.
+- **La velocidad se pierde al salir de la VRAM.** `qwen3:8b`, `qwen3.5:9b` y `llama3.1` no caben
+  del todo —80 a 87%— y por eso tardan 7 a 8,5 s por sección. `gemma4:12b` sí cabe entero pero
+  llena la tarjeta sin dejar aire y baja a 19 tok/s.
+
+Puesto así, la elección se decide sola: **entre los que no inventan nada, `gemma4:e4b` es seis
+veces más rápido que el siguiente**, y además es el que mejor conserva los datos duros (99% contra
+95% y 94%). En la sección del calendario de evaluaciones deja las 15 fechas, horas y salas
+textuales, mientras `qwen3.5:4b` llegaba a escribir «sala tres cero uno» en vez de «sala 301». Una
+guía de estudio sirve justamente por esos datos.
+
+`gemma4:12b` le gana en la nota compuesta por tres décimas, que es menos que el ruido de la propia
+medición, y cuesta 7,1 s por sección en vez de 1,1. No compensa.
+
+Y el peor de los ocho es `llama3.1:latest`, que era **el que corría antes de medir nada**: inventó
+datos en 2 de 11 secciones.
+
+#### Tres defectos que encontró el banco y que no eran del modelo
+
+Vale la pena anotarlos porque ninguno se habría visto mirando una guía por encima:
+
+1. **La ficha índice del ramo se convertía en sección.** Su texto son enlaces de Obsidian, no
+   materia, así que el modelo devolvía o una lista de rutas de archivo copiadas o un párrafo
+   explicando que no encontró nada. El código ya lo sabía a medias —`generarGuia` falla con 404 si
+   esa ficha es la única fuente con texto—; ahora se excluye siempre.
+2. **El encabezado repetido se imprimía debajo del `\section`.** El prompt lo prohíbe y los
+   modelos lo escriben igual. `limpiarProsa` ahora lo quita, reconociéndolo con tildes, mayúsculas
+   o dos puntos de más.
+3. **Un hueco en el propio banco.** Su primera versión le dio 100% de formato a `gemma4:e4b`
+   mientras repetía el encabezado en 3 de 10 secciones: la comprobación estaba en el diseño de la
+   métrica y no en el código. Con ella puesta, el modelo baja de 99,6 a 98,7, que es el número
+   honesto.
+
+#### Dos cosas que conviene saber si se cambia el modelo
+
+- **`num_ctx` se manda explícito, y eso arregló un error que estaba vivo.** No se mandaba nunca,
+  así que el modelo corría con la ventana de su modelfile (4096 tokens por defecto). Lo que sobra
+  no da error: Ollama lo corta **por adelante**, y por adelante van los anuncios, que el código
+  pone primero a propósito. O sea que el recorte se comía justo el material que el orden estaba
+  cuidando. Con el material, el historial y la respuesta, ya se pasaba con `llama3.1`.
+- **El `razona` del perfil hay que medirlo, no suponerlo**, y rompe en las dos direcciones. A los
+  que razonan hay que mandarles `think: false`: sin eso se gastan el presupuesto de tokens pensando
+  y devuelven contenido **vacío**, así que cada sección caería a extracto literal sin explicación.
+  A los que no razonan no se les puede mandar el campo: Ollama responde 400 con `"llama3.1:latest"
+  does not support thinking`. Los dos casos están comprobados contra el Ollama de esta máquina.
+  Aparte, el texto pasa por un filtro antes del PDF, y eso no es paranoia: el pensamiento del
+  modelo suele repetir las claves de cita que acaba de leer, y esas claves **sí** están permitidas,
+  así que el filtro de citas inventadas no las borraría.
+
+> **Inkling 2 Mini**, de Thinking Machines, era el objetivo. No corre en esta máquina y hay dos
+> razones independientes: Ollama lo soporta solo en Apple silicon (v0.40.17: *«PC support will
+> follow in an upcoming release»*), y el tag oficial pesa 20 GB contra 8 de VRAM y 16 de RAM. Hay
+> GGUF de terceros de 13,4 GB que sí cabrían por llama.cpp, pero con los expertos corriendo en
+> RAM DDR4 una guía serían minutos por sección. Cuando Ollama saque el soporte para PC, el perfil
+> es una entrada más en el registro.
 
 ## Qué hay hasta ahora
 
@@ -197,19 +345,59 @@ Lo que no se puede hacer, se dice:
 | Guías en LaTeX → PDF | listo |
 | Ambiente en contenedor | listo |
 | Encuesta y cuadro de adopción | listo |
+| Tareas pendientes y entrega en dos pasos | listo |
+| Extracción de texto de los adjuntos | listo |
 | Indexación distribuida, Parquet, registro verificable | fase 3 |
 
 La pantalla de material se lee del disco, así que **sigue sirviendo aunque la sesión de Canvas
 haya vencido**: muestra lo sincronizado y un aviso explicando qué es lo que no se pudo
 actualizar, en vez de una pantalla en blanco.
 
-### Lo que falta y por qué importa
+### Extracción de texto
 
-Hoy **ningún adjunto aporta texto**: el vault no tiene carpetas `Fuentes extraidas/`, así que los
-PDF y las presentaciones existen pero no se pueden leer, y las guías salen solo de notas Markdown
-(anuncios, tareas, módulos y páginas). La plataforma lo informa en vez de disimularlo —en la
-pantalla de Archivos, en el aviso de la guía y en el pie del PDF— pero sigue siendo el límite más
-grande que tiene ahora mismo.
+Hasta hace poco **ningún adjunto aportaba texto**: los PDF y las presentaciones estaban en el
+disco pero no se podían leer, y una guía de Grafos se armaba con 14 de 155 fuentes. Las otras 141
+eran el límite más grande de la plataforma.
+
+`scripts/extraer-texto.py` lo resuelve. Escribe exactamente lo que el MCP busca —
+`<ramo>/Fuentes extraidas/<file_id>.txt`, que es el contrato que está en su `src/study.mjs` — para
+cada archivo de `<ramo>/Descargas/`.
+
+```bash
+pip install PyMuPDF python-docx python-pptx
+python scripts/extraer-texto.py --dry-run     # dice qué haría
+python scripts/extraer-texto.py
+```
+
+Sobre este vault: **415 adjuntos extraídos, 0 fallos**, 9 sin capa de texto y 50 en formatos que no
+son texto (17 vídeos, 19 planillas, 10 imágenes). Y el cambio que importa no es el número: una guía
+sobre autómatas pasó de tener secciones tituladas «Vista general del ramo» y «CALENDARIO
+EVALUACIONES» a tenerlas tituladas «Teoría de Autómatas. Libro» y «Apuntes Leng Gramáticas
+Autómatas», con la definición de máquina de Moore y los ejercicios del capítulo adentro.
+
+Es un paso **opcional y aparte** a propósito. La plataforma declara una sola dependencia de npm y
+ningún paso de compilación, y esa promesa es media nota del ramo; extraer PDF, DOCX y PPTX necesita
+librerías de Python que la romperían para todo el mundo aunque solo las use quien tenga adjuntos.
+La plataforma levanta y arma guías sin esto: lo que cambia al correrlo es cuánto material tienen
+esas guías.
+
+**No inventa texto.** Un PDF escaneado no se puede leer sin OCR, y el script no hace OCR: lo deja
+anotado y no escribe un `.txt` vacío que haría creer a la plataforma que esa fuente ya se extrajo.
+
+#### Dos cosas que solo aparecieron al extraer
+
+Las dos estaban latentes y ninguna se habría visto sin material de verdad:
+
+- **El índice de un libro no es materia.** Mientras las fuentes eran notas cortas daba igual; con
+  un libro de trescientas páginas, su primer pasaje es el índice, y como el tope por fuente recorta
+  por el principio, la sección salía enumerando títulos en vez de explicarlos. El umbral para
+  detectarlo se midió, no se eligió a ojo: ese índice tiene 30% de líneas con puntos conductores
+  —por debajo de cualquier umbral razonable— pero 61% de líneas que son **solo un número**. Sumadas
+  dan 90%, contra 5% y 0% de los dos pasajes de materia que venían detrás.
+- **Un carácter de control tumbaba el PDF entero.** Están por debajo del tope seguro de
+  `escaparLatex`, así que pasaban enteros; un `0x03` en medio de un ejercicio mataba la compilación
+  con «Fatal error occurred, no output PDF file produced» y el log solo decía `^^C`. Se filtran en
+  los dos sitios: en el extractor y en el generador de LaTeX, que es el último portón antes del PDF.
 
 Por eso la extracción de texto es la primera pieza de la fase 3, y no un ítem del temario: es la
 que convierte cientos de archivos descargados en material citable.
@@ -263,11 +451,18 @@ siguen siendo legibles.
 npm test
 ```
 
-70 pruebas con el runner de Node, sin red, sin Ollama y sin tocar el vault. Lo que cubren es lo
+135 pruebas con el runner de Node, sin red, sin Ollama y sin tocar el vault. Lo que cubren es lo
 que rompe un PDF en silencio: el escapado de LaTeX (una sola pasada, y ningún codepoint raro
 sobrevive), que toda sección salga con al menos una cita y que todas vengan del material, que una
 cita inventada se descarte, y que `canvas_submit_assignment` siga prohibida. La única que necesita
 LaTeX instalado se salta sola si no está.
+
+Las del modelo corren contra un Ollama de mentira —un servidor `node:http` en un puerto al azar,
+no un `fetch` parcheado— así que se ejercita el `fetch` de verdad y los códigos de estado de
+verdad sin que haya ningún modelo bajado. Cubren que la petición lleve `num_ctx` (ver abajo), que
+el razonamiento del modelo no llegue nunca al PDF, que un modelo caído se intente una vez y no
+una por sección, y que tener `qwen3.5:4b-q4_K_M` bajado con `qwen3.5:4b` configurado cuente como
+disponible.
 
 Las quince de adopción cubren lo que haría quedar mal al informe: que medir tumbe una
 petición, que quien se registró y nunca volvió desaparezca del cuadro —justo el que hay que
@@ -334,7 +529,10 @@ web/src/agente.mjs          el modelo local; el codigo busca, el modelo redacta
 web/src/guias.mjs           el pipeline de la guia: fuentes, secciones, citas
 web/src/latex.mjs           escapado, plantilla y compilacion a PDF
 web/src/metricas.mjs        adopcion: quien termino, cuanto usa, si vuelve, si respondio
+web/src/entregas.mjs        entregar en Canvas, en dos pasos y acotado a tu carpeta
 web/public/                 la pagina: HTML, CSS y JS a mano
+scripts/extraer-texto.py    convierte los adjuntos en texto citable (opcional, Python)
+scripts/banco-de-modelos.mjs  mide que modelo sirve para esta tarea (npm run banco)
 test/                       node --test, sin red y sin vault
 Dockerfile                  Node fijado + la instalacion minima de LaTeX
 docker-compose.yml          el servicio web; Ollama se queda en el anfitrion

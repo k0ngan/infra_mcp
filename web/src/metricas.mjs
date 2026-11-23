@@ -48,6 +48,9 @@ export const EVENTOS = {
   GUIA: "guia.creada",
   CHAT: "chat.mensaje",
   ENCUESTA: "encuesta.respondida",
+  /* Se registra el hecho de haber entregado, nunca que tarea ni que archivo:
+   * para medir adopcion basta con que paso, y el resto es cosa de la persona. */
+  ENTREGA: "entrega.confirmada",
 };
 
 /**

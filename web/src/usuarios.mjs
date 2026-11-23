@@ -166,6 +166,23 @@ function derivarId(correo, usuariosExistentes = {}) {
  * usuario tiene la suya bajo %LOCALAPPDATA%\plataforma-estudio\<id>\, que es la
  * misma convencion que ya usa el MCP para la suya.
  */
+/**
+ * Donde se dejan los archivos que alguien sube para entregar.
+ *
+ * Fuera del repositorio y una por usuario, igual que las cookies. No es un
+ * archivo de trabajo: es lo que el MCP va a mandar a Canvas, asi que importa que
+ * nadie pueda apuntar a la carpeta de otro.
+ */
+export function carpetaDeEntregas(id) {
+  if (process.env.PLATAFORMA_ENTREGAS) {
+    return path.resolve(RAIZ, process.env.PLATAFORMA_ENTREGAS, id);
+  }
+  const localAppData =
+    process.env.LOCALAPPDATA ||
+    path.join(process.env.USERPROFILE || process.env.HOME || process.cwd(), "AppData", "Local");
+  return path.join(localAppData, "plataforma-estudio", id, "entregas");
+}
+
 export function rutaDeCookie(id, usuario) {
   if (usuario.cookie && String(usuario.cookie).trim()) {
     return path.resolve(RAIZ, String(usuario.cookie).trim());
@@ -197,7 +214,20 @@ function entornoDe(baseUrl, id, usuario) {
     CANVAS_VAULT_DIR: path.resolve(RAIZ, usuario.vault),
     CANVAS_SUBDIR: usuario.subdir || "Canvas",
     CANVAS_COOKIE_FILE: rutaDeCookie(id, usuario),
-    // CANVAS_UPLOAD_DIR no se declara nunca. Ver el comentario de arriba.
+    /*
+     * La carpeta desde la que se puede entregar, y nada mas que esa.
+     *
+     * Antes no se declaraba, y eso era la garantia de que el MCP no podia subir
+     * nada aunque alguien invocara la herramienta. Ahora la pantalla si permite
+     * entregar, asi que hay que declararla — y conviene ver que al declararla
+     * acotada se gana una garantia distinta, no se pierde la unica que habia:
+     * `upload.mjs` del MCP rechaza cualquier archivo que caiga fuera de esta
+     * raiz. O sea que una entrega solo puede llevar un archivo que esta persona
+     * subio por la pantalla, nunca una ruta arbitraria del disco.
+     *
+     * Una carpeta por usuario, para que nadie entregue el archivo de otro.
+     */
+    CANVAS_UPLOAD_DIR: carpetaDeEntregas(id),
   };
 }
 

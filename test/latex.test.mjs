@@ -26,6 +26,31 @@ import {
 
 /* ───────── escaparLatex ───────── */
 
+test("un caracter de control no tumba el PDF entero", () => {
+  /*
+   * Estaban por debajo del tope seguro, asi que pasaban enteros. Mientras las
+   * fuentes eran notas de Canvas no aparecia ninguno; desde que se extrae el
+   * texto de los PDF vienen dentro, y un 0x03 en medio de un ejercicio mato una
+   * compilacion entera: "Fatal error occurred, no output PDF file produced".
+   */
+  const control = c => String.fromCharCode(c);
+  const conControl = `Demuestre${control(3)} que${control(0)} para todo n${control(31)} mayor que 0.`;
+  const escapado = escaparLatex(conControl);
+
+  const quedanControles = [...escapado].some(caracter => {
+    const punto = caracter.codePointAt(0);
+    return (punto < 0x20 && punto !== 0x0a && punto !== 0x09) || (punto >= 0x7f && punto <= 0x9f);
+  });
+  assert.ok(!quedanControles, "no puede quedar ningun caracter de control");
+  assert.equal(escapado, "Demuestre que para todo n mayor que 0.");
+});
+
+test("el salto de linea y el tabulador si sobreviven", () => {
+  // Son los dos controles que significan algo dentro de un documento.
+  assert.equal(escaparLatex("uno\ndos"), "uno\ndos");
+  assert.equal(escaparLatex("uno\tdos"), "uno\tdos");
+});
+
 test("escapa cada caracter especial de LaTeX", () => {
   assert.equal(escaparLatex("{"), "\\{");
   assert.equal(escaparLatex("}"), "\\}");
